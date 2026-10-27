@@ -11,6 +11,8 @@ const storedIssues = JSON.parse(localStorage.getItem("civicIssues") || "null");
 let issues = storedIssues || starterIssues;
 const issueList = document.getElementById("issueList");
 const count = document.getElementById("heroIssueCount");
+const authModal = document.getElementById("authModal");
+let authMode = "login";
 
 function saveIssues() { localStorage.setItem("civicIssues", JSON.stringify(issues)); }
 function renderIssues() {
@@ -21,8 +23,45 @@ function renderIssues() {
 }
 
 document.getElementById("categoryFilter").addEventListener("change", renderIssues);
+function currentUser() { return JSON.parse(localStorage.getItem("civicUser") || "null"); }
+function closeAuth() { authModal.classList.remove("visible"); authModal.setAttribute("aria-hidden", "true"); }
+function updateAuthModal() {
+  const signup = authMode === "signup";
+  document.getElementById("authTitle").textContent = signup ? "Create your account" : "Welcome back";
+  document.getElementById("authSubtitle").textContent = signup ? "Create an account before reporting civic issues." : "Log in before reporting an issue.";
+  document.getElementById("nameField").classList.toggle("hidden", !signup);
+  document.getElementById("authName").required = signup;
+  document.getElementById("authSubmit").textContent = signup ? "Create account" : "Log in";
+  document.querySelectorAll(".auth-tabs button").forEach(button => button.classList.toggle("active", button.dataset.mode === authMode));
+}
+function openAuth(mode = "login") { authMode = mode; updateAuthModal(); authModal.classList.add("visible"); authModal.setAttribute("aria-hidden", "false"); }
+function requireLogin() { if (currentUser()) document.getElementById("report").scrollIntoView({ behavior: "smooth" }); else openAuth("signup"); }
+document.getElementById("openAuth").addEventListener("click", () => openAuth("login"));
+document.getElementById("closeAuth").addEventListener("click", closeAuth);
+document.getElementById("navReport").addEventListener("click", requireLogin);
+document.getElementById("heroReport").addEventListener("click", requireLogin);
+document.querySelectorAll(".auth-tabs button").forEach(button => button.addEventListener("click", () => { authMode = button.dataset.mode; updateAuthModal(); }));
+authModal.addEventListener("click", event => { if (event.target === authModal) closeAuth(); });
+document.getElementById("authForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const email = document.getElementById("authEmail").value.trim().toLowerCase();
+  const password = document.getElementById("authPassword").value;
+  const name = document.getElementById("authName").value.trim();
+  const registered = JSON.parse(localStorage.getItem("civicAccount") || "null");
+  const message = document.getElementById("authMessage");
+  if (authMode === "signup") {
+    localStorage.setItem("civicAccount", JSON.stringify({ name, email, password }));
+    localStorage.setItem("civicUser", JSON.stringify({ name, email }));
+    message.textContent = "Account created. You can now submit a report.";
+  } else if (registered && registered.email === email && registered.password === password) {
+    localStorage.setItem("civicUser", JSON.stringify({ name: registered.name, email }));
+    message.textContent = "Logged in successfully.";
+  } else { message.textContent = "No matching demo account found. Please sign up first."; return; }
+  setTimeout(() => { closeAuth(); document.getElementById("report").scrollIntoView({ behavior: "smooth" }); }, 500);
+});
 document.getElementById("reportForm").addEventListener("submit", event => {
   event.preventDefault();
+  if (!currentUser()) { openAuth("signup"); return; }
   const form = new FormData(event.target);
   issues.unshift({ title: form.get("title"), category: form.get("category"), location: form.get("location"), description: form.get("description"), date: "Just now" });
   saveIssues(); renderIssues(); event.target.reset();
