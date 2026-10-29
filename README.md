@@ -7,7 +7,7 @@ A static HTML, CSS, and JavaScript website that lets civilians view local civic 
 - Community issue board with department filters
 - Report form with department chips and up to 3 photos (resized in the browser, kept in this browser only in this demo)
 - Complaint-report form with input checks
-- Demo sign-in with a display name only (no email or password)
+- Email and password accounts through Supabase Auth, plus demo sign-in with a display name only
 - Browser-based storage using localStorage
 - Responsive landing page; the sign-in window closes with Escape and keeps keyboard focus inside
 
