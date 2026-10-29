@@ -30,6 +30,21 @@ function cleanPhotos(list) {
 function isValidIssue(issue) {
   return issue && typeof issue === "object" && typeof issue.title === "string" && typeof issue.category === "string" && typeof issue.location === "string" && typeof issue.description === "string";
 }
+// One-time cleanup of data saved by earlier versions of this demo. The first version kept the
+// signup password as typed under "civicAccount"; remove it and any other account list, and keep
+// only the display name from an old signed-in user (drop the saved email).
+function cleanLegacyData() {
+  try {
+    localStorage.removeItem("civicAccount");
+    localStorage.removeItem("civicAccounts");
+    const user = readStorage("civicUser", null);
+    if (user && typeof user === "object" && "email" in user) {
+      writeStorage("civicUser", { name: typeof user.name === "string" ? user.name.slice(0, 40) : "" });
+    }
+  } catch (error) { /* storage unavailable: nothing to clean */ }
+}
+
+cleanLegacyData();
 const storedIssues = readStorage("civicIssues", null);
 const validStored = Array.isArray(storedIssues) ? storedIssues.filter(isValidIssue).map(issue => Object.assign({}, issue, { photos: cleanPhotos(issue.photos) })) : [];
 let issues = validStored.length || (Array.isArray(storedIssues) && storedIssues.length === 0) ? validStored : starterIssues;
