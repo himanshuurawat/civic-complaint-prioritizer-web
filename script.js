@@ -128,3 +128,22 @@ document.getElementById("reportForm").addEventListener("submit", event => {
 });
 
 renderIssues();
+
+// Light/dark theme. The choice is remembered in this browser; the first visit follows the system setting.
+(function () {
+  const root = document.documentElement;
+  const toggle = document.getElementById("themeToggle");
+  const saved = readStorage("civicTheme", null);
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  function applyTheme(theme) {
+    if (theme === "dark") root.setAttribute("data-theme", "dark"); else root.removeAttribute("data-theme");
+    toggle.textContent = theme === "dark" ? "\u2600" : "\u263e";
+    toggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  }
+  applyTheme(saved === "dark" || saved === "light" ? saved : prefersDark ? "dark" : "light");
+  toggle.addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    applyTheme(next);
+    writeStorage("civicTheme", next);
+  });
+})();
