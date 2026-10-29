@@ -37,7 +37,7 @@ const issueList = document.getElementById("issueList");
 const count = document.getElementById("heroIssueCount");
 const authModal = document.getElementById("authModal");
 
-function saveIssues() { writeStorage("civicIssues", issues); }
+function saveIssues() { return writeStorage("civicIssues", issues); }
 function formatDate(issue) {
   if (!issue.createdAt) return issue.date || "";
   const created = new Date(issue.createdAt);
@@ -60,7 +60,9 @@ function buildCard(issue) {
   if (photos.length) {
     const cover = makeEl("div", "issue-photos");
     const img = document.createElement("img");
-    img.src = photos[0]; img.alt = "Photo of the reported problem"; img.loading = "lazy";
+    img.alt = "Photo of the reported problem"; img.loading = "lazy";
+    img.addEventListener("error", () => cover.remove());
+    img.src = photos[0];
     cover.append(img);
     if (photos.length > 1) cover.append(makeEl("span", "more", "+" + (photos.length - 1) + " more"));
     card.append(cover);
