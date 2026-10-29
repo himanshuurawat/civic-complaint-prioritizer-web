@@ -4,7 +4,8 @@ A static HTML, CSS, and JavaScript website that lets civilians view local civic 
 
 ## Current MVP
 
-- Community issue board with category filters
+- Community issue board with department filters
+- Report form with department chips and up to 3 photos (resized in the browser, kept in this browser only in this demo)
 - Complaint-report form with input checks
 - Demo sign-in with a display name only (no email or password)
 - Browser-based storage using localStorage

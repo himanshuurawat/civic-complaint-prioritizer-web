@@ -21,17 +21,23 @@ function readStorage(key, fallback) {
 function writeStorage(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (error) { return false; }
 }
+const DEPARTMENTS = { Roads: "Roads & Transport", Waste: "Waste & Sanitation", Water: "Water Supply", Streetlights: "Streetlights & Power", Safety: "Public Safety" };
+const MAX_PHOTOS = 3;
+const PHOTO_PATTERN = /^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/;
+function cleanPhotos(list) {
+  return Array.isArray(list) ? list.filter(p => typeof p === "string" && p.length < 400000 && PHOTO_PATTERN.test(p)).slice(0, MAX_PHOTOS) : [];
+}
 function isValidIssue(issue) {
   return issue && typeof issue === "object" && typeof issue.title === "string" && typeof issue.category === "string" && typeof issue.location === "string" && typeof issue.description === "string";
 }
 const storedIssues = readStorage("civicIssues", null);
-const validStored = Array.isArray(storedIssues) ? storedIssues.filter(isValidIssue) : [];
+const validStored = Array.isArray(storedIssues) ? storedIssues.filter(isValidIssue).map(issue => Object.assign({}, issue, { photos: cleanPhotos(issue.photos) })) : [];
 let issues = validStored.length || (Array.isArray(storedIssues) && storedIssues.length === 0) ? validStored : starterIssues;
 const issueList = document.getElementById("issueList");
 const count = document.getElementById("heroIssueCount");
 const authModal = document.getElementById("authModal");
 
-function saveIssues() { writeStorage("civicIssues", issues); }
+function saveIssues() { return writeStorage("civicIssues", issues); }
 function formatDate(issue) {
   if (!issue.createdAt) return issue.date || "";
   const created = new Date(issue.createdAt);
@@ -50,8 +56,19 @@ function makeEl(tag, className, text) {
 }
 function buildCard(issue) {
   const card = makeEl("article", "issue-card");
+  const photos = cleanPhotos(issue.photos);
+  if (photos.length) {
+    const cover = makeEl("div", "issue-photos");
+    const img = document.createElement("img");
+    img.alt = "Photo of the reported problem"; img.loading = "lazy";
+    img.addEventListener("error", () => cover.remove());
+    img.src = photos[0];
+    cover.append(img);
+    if (photos.length > 1) cover.append(makeEl("span", "more", "+" + (photos.length - 1) + " more"));
+    card.append(cover);
+  }
   const meta = makeEl("div", "issue-meta");
-  meta.append(makeEl("span", "tag", issue.category), makeEl("span", "", formatDate(issue)));
+  meta.append(makeEl("span", "tag", DEPARTMENTS[issue.category] || issue.category), makeEl("span", "", formatDate(issue)));
   card.append(meta, makeEl("h3", "", issue.title), makeEl("p", "", issue.description), makeEl("small", "", "\u{1F4CD} " + issue.location));
   return card;
 }
@@ -117,12 +134,12 @@ document.getElementById("reportForm").addEventListener("submit", event => {
   const description = String(form.get("description") || "").trim();
   const category = String(form.get("category") || "");
   if (!title || !location || !description || !CATEGORIES.includes(category)) {
-    note.textContent = "Please fill in every field. Spaces alone do not count.";
+    note.textContent = "Please fill in the title, location, department and description. Spaces alone do not count.";
     return;
   }
-  issues.unshift({ title: title.slice(0, 70), category, location: location.slice(0, 70), description: description.slice(0, 280), createdAt: new Date().toISOString() });
+  issues.unshift({ title: title.slice(0, 70), category, location: location.slice(0, 70), description: description.slice(0, 280), createdAt: new Date().toISOString(), photos: photos.slice() });
   if (!saveIssues()) { note.textContent = "Your report is shown, but this browser could not save it."; }
-  renderIssues(); event.target.reset();
+  renderIssues(); event.target.reset(); photos.length = 0; renderPhotos(); updateCount();
   if (!note.textContent.startsWith("Your report is shown")) note.textContent = "Your report is now visible on the community board.";
   document.getElementById("issues").scrollIntoView({ behavior: "smooth" });
 });
@@ -195,3 +212,60 @@ renderIssues();
   }, true);
   if (hasEntered()) showApp(); else signOutBtn.textContent = "Sign in";
 })();
+
+// Report form: photos (resized in the browser, which also removes location data) and character count.
+const photos = [];
+const photoInput = document.getElementById("photoInput");
+const photoPreview = document.getElementById("photoPreview");
+function updateCount() {
+  document.getElementById("descCount").textContent = document.getElementById("description").value.length + " / 280";
+}
+document.getElementById("description").addEventListener("input", updateCount);
+function renderPhotos() {
+  photoPreview.replaceChildren(...photos.map((src, index) => {
+    const thumb = makeEl("div", "thumb");
+    const img = document.createElement("img");
+    img.src = src; img.alt = "Selected photo " + (index + 1);
+    const remove = makeEl("button", "", "\u00d7");
+    remove.type = "button"; remove.setAttribute("aria-label", "Remove photo " + (index + 1));
+    remove.addEventListener("click", () => { photos.splice(index, 1); renderPhotos(); });
+    thumb.append(img, remove);
+    return thumb;
+  }));
+}
+function shrinkPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+photoInput.addEventListener("change", async () => {
+  const note = document.getElementById("formMessage");
+  const files = Array.from(photoInput.files || []);
+  photoInput.value = "";
+  let skipped = 0;
+  for (const file of files) {
+    if (photos.length >= MAX_PHOTOS) { skipped++; continue; }
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) { skipped++; continue; }
+    try {
+      const data = await shrinkPhoto(file);
+      if (PHOTO_PATTERN.test(data) && data.length < 400000) photos.push(data); else skipped++;
+    } catch (error) { skipped++; }
+  }
+  renderPhotos();
+  note.textContent = skipped ? "Some files were skipped. Use up to " + MAX_PHOTOS + " JPG, PNG or WebP photos under 15 MB." : "";
+});
