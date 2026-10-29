@@ -34,13 +34,13 @@
         <button type="button" id="tabSignup" role="tab" aria-selected="false">Create account</button>
       </div>
       <form id="accountForm" novalidate>
-        <label>Email<input id="accEmail" type="email" autocomplete="email" required></label>
+        <label id="accEmailWrap">Email<input id="accEmail" type="email" autocomplete="email" required></label>
         <label>Password<input id="accPassword" type="password" autocomplete="current-password" minlength="8" required></label>
         <label class="hidden" id="accConfirmWrap">Confirm password<input id="accConfirm" type="password" autocomplete="new-password" minlength="8"></label>
         <button class="button" id="accSubmit" type="submit">Sign in</button>
         <p class="form-note" id="accMessage" role="status"></p>
       </form>
-      <p class="welcome-note"><button class="login-link" id="accForgot" type="button">Forgot password?</button> <button class="login-link" id="accBack" type="button">Back</button></p>
+      <p class="welcome-note" id="accLinks"><button class="login-link" id="accForgot" type="button">Forgot password?</button> <button class="login-link" id="accBack" type="button">Back</button></p>
       <small class="welcome-note">Your email and password are handled by Supabase Auth, not stored by this website. Reports and photos are still saved in this browser only for now.</small>
     </div>
   </section>
