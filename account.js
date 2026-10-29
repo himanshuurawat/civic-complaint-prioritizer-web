@@ -9,6 +9,7 @@
   const card = $("accountCard"), welcomeCard = document.querySelector(".welcome-card");
   const form = $("accountForm"), msg = $("accMessage");
   let mode = "signin";
+  let resetToken = null; // password-reset access token, kept in memory only
 
   function say(text, isError) { msg.textContent = text; msg.classList.toggle("error", !!isError); }
   function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token: s.access_token, refresh_token: s.refresh_token, email: s.user && s.user.email })); } catch (e) { /* ignore */ } }
@@ -37,13 +38,17 @@
   function close() { card.classList.add("hidden"); welcomeCard.classList.remove("hidden"); }
   function setMode(m) {
     mode = m; say("");
-    const up = m === "signup";
+    const up = m === "signup", rs = m === "reset";
+    $("accEmailWrap").classList.toggle("hidden", rs);
+    $("accEmail").required = !rs;
+    document.querySelector("#accountCard .auth-tabs").classList.toggle("hidden", rs);
+    $("accLinks").classList.toggle("hidden", rs);
     $("tabSignin").classList.toggle("active", !up); $("tabSignup").classList.toggle("active", up);
     $("tabSignin").setAttribute("aria-selected", String(!up)); $("tabSignup").setAttribute("aria-selected", String(up));
-    $("accConfirmWrap").classList.toggle("hidden", !up);
-    $("accountTitle").textContent = up ? "Create account" : "Sign in";
-    $("accSubmit").textContent = up ? "Create account" : "Sign in";
-    $("accPassword").autocomplete = up ? "new-password" : "current-password";
+    $("accConfirmWrap").classList.toggle("hidden", !(up || rs));
+    $("accountTitle").textContent = rs ? "Set a new password" : up ? "Create account" : "Sign in";
+    $("accSubmit").textContent = rs ? "Save new password" : up ? "Create account" : "Sign in";
+    $("accPassword").autocomplete = (up || rs) ? "new-password" : "current-password";
     $("accForgot").classList.toggle("hidden", up);
   }
   function enterAs(email) {
@@ -59,6 +64,19 @@
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const email = $("accEmail").value.trim(), password = $("accPassword").value;
+    if (mode === "reset") {
+      if (password.length < 8) { say("Password must be at least 8 characters.", true); return; }
+      if (password !== $("accConfirm").value) { say("The two passwords do not match.", true); return; }
+      const rb = $("accSubmit"); rb.disabled = true;
+      try {
+        const r = await api("/auth/v1/user", { password: password }, resetToken, "PUT");
+        if (!r.ok) { say(r.data.error_code === "same_password" ? "Choose a password you have not used before." : r.data.error_code === "weak_password" ? "Choose a stronger password (at least 8 characters)." : "This reset link has expired. Request a new one.", true); return; }
+        resetToken = null; form.reset(); setMode("signin");
+        say("Password updated. Sign in with your new password.");
+      } catch (e) { say("Could not reach the sign-in service. Check your connection.", true); }
+      finally { rb.disabled = false; }
+      return;
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say("Enter a valid email address.", true); return; }
     if (password.length < 8) { say("Password must be at least 8 characters.", true); return; }
     if (mode === "signup" && password !== $("accConfirm").value) { say("The two passwords do not match.", true); return; }
@@ -86,6 +104,18 @@
       say(r.ok ? "If that email has an account, a reset link is on its way." : friendly(r), !r.ok);
     } catch (e) { say("Could not reach the sign-in service.", true); }
   });
+
+  // Links in Supabase emails come back with a result in the address after "#".
+  (function handleEmailLink() {
+    const h = location.hash.replace(/^#/, ""); if (!h) return;
+    const p = new URLSearchParams(h), type = p.get("type");
+    if (!p.get("access_token") && !p.get("error_code")) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    document.body.classList.add("gated");
+    if (p.get("error_code")) { open(); say("That email link is invalid or has expired. Request a new one.", true); return; }
+    if (type === "recovery") { resetToken = p.get("access_token"); open(); setMode("reset"); $("accPassword").focus(); return; }
+    if (type === "signup" || type === "email_change") { open(); say("Email confirmed. Sign in to continue."); }
+  })();
 
   window.civicSignOut = function () {
     const s = loadSession(); clearSession();
