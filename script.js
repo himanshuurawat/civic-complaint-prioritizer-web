@@ -206,8 +206,8 @@ renderIssues();
     window.scrollTo(0, 0);
     nameInput.focus();
   }
-  function enter(name) {
-    writeStorage("civicUser", { name: name });
+  function enter(name, account) {
+    writeStorage("civicUser", account ? { name: name, account: true } : { name: name });
     try { sessionStorage.setItem("civicEntered", "1"); } catch (error) { /* continue without remembering */ }
     showApp();
   }
@@ -217,12 +217,14 @@ renderIssues();
     if (!name) { nameInput.focus(); return; }
     enter(name);
   });
+  window.civicEnter = enter;
   document.getElementById("guestBtn").addEventListener("click", () => enter("Guest"));
   // The header button now signs out and returns to the entry page.
   signOutBtn.addEventListener("click", event => {
     if (document.body.classList.contains("gated")) return;
     event.stopImmediatePropagation();
     try { localStorage.removeItem("civicUser"); sessionStorage.removeItem("civicEntered"); } catch (error) { /* ignore */ }
+    if (window.civicSignOut) window.civicSignOut();
     showWelcome();
   }, true);
   if (hasEntered()) showApp(); else signOutBtn.textContent = "Sign in";
