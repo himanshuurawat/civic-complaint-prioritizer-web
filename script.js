@@ -132,18 +132,66 @@ renderIssues();
 // Light/dark theme. The choice is remembered in this browser; the first visit follows the system setting.
 (function () {
   const root = document.documentElement;
-  const toggle = document.getElementById("themeToggle");
+  const toggles = Array.from(document.querySelectorAll(".theme-toggle"));
   const saved = readStorage("civicTheme", null);
   const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   function applyTheme(theme) {
     if (theme === "dark") root.setAttribute("data-theme", "dark"); else root.removeAttribute("data-theme");
-    toggle.textContent = theme === "dark" ? "\u2600" : "\u263e";
-    toggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    toggles.forEach(toggle => {
+      toggle.textContent = theme === "dark" ? "\u2600" : "\u263e";
+      toggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    });
   }
   applyTheme(saved === "dark" || saved === "light" ? saved : prefersDark ? "dark" : "light");
-  toggle.addEventListener("click", () => {
+  toggles.forEach(toggle => toggle.addEventListener("click", () => {
     const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
     applyTheme(next);
     writeStorage("civicTheme", next);
+  }));
+})();
+
+// Entry page: sign in with a name (demo) or continue as a guest, then show the main page.
+// Nothing here is real authentication. The name is kept in this browser only.
+(function () {
+  const welcomeForm = document.getElementById("welcomeForm");
+  const nameInput = document.getElementById("welcomeName");
+  const signOutBtn = document.getElementById("openAuth");
+  const greeting = document.getElementById("greeting");
+  function hasEntered() {
+    try { return sessionStorage.getItem("civicEntered") === "1" && !!currentUser(); } catch (error) { return false; }
+  }
+  function showApp() {
+    document.body.classList.remove("gated");
+    const user = currentUser();
+    greeting.textContent = user && user.name ? "Hi, " + user.name + "." : "";
+    signOutBtn.textContent = "Sign out";
+    window.scrollTo(0, 0);
+  }
+  function showWelcome() {
+    document.body.classList.add("gated");
+    signOutBtn.textContent = "Sign in";
+    nameInput.value = "";
+    window.scrollTo(0, 0);
+    nameInput.focus();
+  }
+  function enter(name) {
+    writeStorage("civicUser", { name: name });
+    try { sessionStorage.setItem("civicEntered", "1"); } catch (error) { /* continue without remembering */ }
+    showApp();
+  }
+  welcomeForm.addEventListener("submit", event => {
+    event.preventDefault();
+    const name = nameInput.value.trim().slice(0, 40);
+    if (!name) { nameInput.focus(); return; }
+    enter(name);
   });
+  document.getElementById("guestBtn").addEventListener("click", () => enter("Guest"));
+  // The header button now signs out and returns to the entry page.
+  signOutBtn.addEventListener("click", event => {
+    if (document.body.classList.contains("gated")) return;
+    event.stopImmediatePropagation();
+    try { localStorage.removeItem("civicUser"); sessionStorage.removeItem("civicEntered"); } catch (error) { /* ignore */ }
+    showWelcome();
+  }, true);
+  if (hasEntered()) showApp(); else signOutBtn.textContent = "Sign in";
 })();
