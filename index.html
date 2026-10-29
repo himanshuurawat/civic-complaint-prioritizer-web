@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; connect-src 'self' https://omuednmzkvaalrwdxbsq.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="description" content="A civic issue reporting website connecting residents with local authorities.">
   <title>CivicPulse - Civic Complaint Prioritizer</title>
   <link rel="stylesheet" href="styles.css">
@@ -13,7 +13,9 @@
     <div class="welcome-card">
       <p class="brand-mark logo"><svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ripple" cx="16" cy="16" r="12"/><circle class="ring" cx="16" cy="16" r="12"/><path class="beat" pathLength="1" d="M3.5 17h6l3-7 5 13 3-6h7.5"/></svg><span class="logo-text">Civic<span>Pulse</span></span></p>
       <h1 id="welcomeTitle">Welcome</h1>
-      <p class="welcome-copy">Report problems in your area and see what your neighbours have reported. This is a demo: there are no accounts and no passwords.</p>
+      <p class="welcome-copy">Report problems in your area and see what your neighbours have reported. Create an account with your email, or try the demo with just a name.</p>
+      <button class="button" id="accountBtn" type="button">Sign in or create account</button>
+      <p class="welcome-or"><span>or try the demo</span></p>
       <form id="welcomeForm">
         <label>Your name
           <input id="welcomeName" name="name" maxlength="40" autocomplete="nickname" placeholder="For example: Asha" required>
@@ -22,7 +24,24 @@
       </form>
       <p class="welcome-or"><span>or</span></p>
       <button class="button button-ghost" id="guestBtn" type="button">Continue as guest</button>
-      <small class="welcome-note">Demo only. Your name is saved in this browser and is not a real account. Real sign-in needs a server and is planned for a later version.</small>
+      <small class="welcome-note">Demo name and guest modes are not real accounts and are saved in this browser only.</small>
+    </div>
+    <div class="welcome-card hidden" id="accountCard" role="dialog" aria-labelledby="accountTitle">
+      <p class="brand-mark logo"><span class="logo-text">Civic<span>Pulse</span></span></p>
+      <h1 id="accountTitle">Sign in</h1>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="active" id="tabSignin" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" id="tabSignup" role="tab" aria-selected="false">Create account</button>
+      </div>
+      <form id="accountForm" novalidate>
+        <label>Email<input id="accEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="accPassword" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label class="hidden" id="accConfirmWrap">Confirm password<input id="accConfirm" type="password" autocomplete="new-password" minlength="8"></label>
+        <button class="button" id="accSubmit" type="submit">Sign in</button>
+        <p class="form-note" id="accMessage" role="status"></p>
+      </form>
+      <p class="welcome-note"><button class="login-link" id="accForgot" type="button">Forgot password?</button> <button class="login-link" id="accBack" type="button">Back</button></p>
+      <small class="welcome-note">Your email and password are handled by Supabase Auth, not stored by this website. Reports and photos are still saved in this browser only for now.</small>
     </div>
   </section>
 
@@ -134,5 +153,6 @@
     </section>
   </div>
   <script src="script.js"></script>
+  <script src="account.js"></script>
 </body>
 </html>
