@@ -8,13 +8,31 @@
   <title>Civic Complaint Prioritizer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="gated">
+  <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
+    <button class="theme-toggle welcome-toggle" type="button" aria-label="Switch to dark mode" title="Switch theme">&#9790;</button>
+    <div class="welcome-card">
+      <p class="brand-mark">Civic<span>Connect</span></p>
+      <h1 id="welcomeTitle">Welcome</h1>
+      <p class="welcome-copy">Report problems in your area and see what your neighbours have reported. This is a demo: there are no accounts and no passwords.</p>
+      <form id="welcomeForm">
+        <label>Your name
+          <input id="welcomeName" name="name" maxlength="40" autocomplete="nickname" placeholder="For example: Asha" required>
+        </label>
+        <button class="button" type="submit">Sign in with a name</button>
+      </form>
+      <p class="welcome-or"><span>or</span></p>
+      <button class="button button-ghost" id="guestBtn" type="button">Continue as guest</button>
+      <small class="welcome-note">Demo only. Your name is saved in this browser and is not a real account. Real sign-in needs a server and is planned for a later version.</small>
+    </div>
+  </section>
+
   <header class="site-header">
     <a class="brand" href="#top" aria-label="Civic Complaint Prioritizer home">Civic<span>Connect</span></a>
     <nav aria-label="Main navigation">
       <a href="#issues">Community issues</a>
       <a href="#report">Report an issue</a>
-      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Switch theme">☾</button>
+      <button class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch theme">☾</button>
       <button class="login-link" id="openAuth" type="button">Sign in</button>
       <button class="button button-small" id="navReport" type="button">Create report</button>
     </nav>
@@ -23,6 +41,7 @@
   <main id="top">
     <section class="hero">
       <div>
+        <p class="greeting" id="greeting" aria-live="polite"></p>
         <p class="eyebrow">A SIMPLE CIVIC REPORTING PLATFORM</p>
         <h1>See a problem.<br><em>Make it visible.</em></h1>
         <p class="hero-copy">CivicConnect helps residents report local issues and gives authorities a clearer view of what needs attention.</p>
