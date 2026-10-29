@@ -97,3 +97,7 @@ body:not(.gated) .site-header,body:not(.gated) main{animation:fade .4s ease both
 .dept-chip span{height:100%;box-sizing:border-box}main section{scroll-margin-top:84px}
 /* Account sign-in card */
 #accountCard{margin:auto}.welcome .auth-tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin:18px 0 20px}.welcome .auth-tabs button{padding:0 0 12px;border:0;background:transparent;color:var(--muted);font-weight:800;cursor:pointer}.welcome .auth-tabs button.active{color:var(--blue);border-bottom:2px solid var(--blue)}.welcome .welcome-note .login-link{color:var(--blue);font-size:13px;margin-right:14px}.welcome .form-note.error{color:#ff8a8a}
+/* Welcome polish: headline pulse line (decorative) */
+.welcome-card h1{line-height:1.1}.welcome-pulse{display:block;width:240px;max-width:100%;height:28px;margin:0 0 14px}.welcome-pulse path{fill:none;stroke:var(--mint);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:0}
+@media (prefers-reduced-motion:no-preference){.welcome-pulse path{stroke-dashoffset:1;animation:pulse-draw 1.8s ease-out .25s forwards}}
+@keyframes pulse-draw{to{stroke-dashoffset:0}}
