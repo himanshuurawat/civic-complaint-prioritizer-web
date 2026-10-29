@@ -182,11 +182,8 @@ renderIssues();
   }));
 })();
 
-// Entry page: sign in with a name (demo) or continue as a guest, then show the main page.
-// Nothing here is real authentication. The name is kept in this browser only.
+// Entry page: continue as a guest (not a real account), then show the main page. Real accounts are in account.js.
 (function () {
-  const welcomeForm = document.getElementById("welcomeForm");
-  const nameInput = document.getElementById("welcomeName");
   const signOutBtn = document.getElementById("openAuth");
   const greeting = document.getElementById("greeting");
   function hasEntered() {
@@ -202,21 +199,14 @@ renderIssues();
   function showWelcome() {
     document.body.classList.add("gated");
     signOutBtn.textContent = "Sign in";
-    nameInput.value = "";
     window.scrollTo(0, 0);
-    nameInput.focus();
+    document.getElementById("accountBtn").focus();
   }
   function enter(name, account) {
     writeStorage("civicUser", account ? { name: name, account: true } : { name: name });
     try { sessionStorage.setItem("civicEntered", "1"); } catch (error) { /* continue without remembering */ }
     showApp();
   }
-  welcomeForm.addEventListener("submit", event => {
-    event.preventDefault();
-    const name = nameInput.value.trim().slice(0, 40);
-    if (!name) { nameInput.focus(); return; }
-    enter(name);
-  });
   window.civicEnter = enter;
   document.getElementById("guestBtn").addEventListener("click", () => enter("Guest"));
   // The header button now signs out and returns to the entry page.

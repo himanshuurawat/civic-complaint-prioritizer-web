@@ -12,19 +12,13 @@
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
     <div class="welcome-card">
       <p class="brand-mark logo"><svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ripple" cx="16" cy="16" r="12"/><circle class="ring" cx="16" cy="16" r="12"/><path class="beat" pathLength="1" d="M3.5 17h6l3-7 5 13 3-6h7.5"/></svg><span class="logo-text">Civic<span>Pulse</span></span></p>
-      <h1 id="welcomeTitle">Welcome</h1>
-      <p class="welcome-copy">Report problems in your area and see what your neighbours have reported. Create an account with your email, or try the demo with just a name.</p>
+      <h1 id="welcomeTitle">Make local problems visible.</h1>
+      <svg class="welcome-pulse" viewBox="0 0 240 28" aria-hidden="true"><path pathLength="1" d="M0 14h70l9-11 14 22 12-17 8 6h127"/></svg>
+      <p class="welcome-copy">Report issues in your area and see what neighbours have reported. Sign in to keep your reports under your name, or look around as a guest.</p>
       <button class="button" id="accountBtn" type="button">Sign in or create account</button>
-      <p class="welcome-or"><span>or try the demo</span></p>
-      <form id="welcomeForm">
-        <label>Your name
-          <input id="welcomeName" name="name" maxlength="40" autocomplete="nickname" placeholder="For example: Asha" required>
-        </label>
-        <button class="button" type="submit">Sign in with a name</button>
-      </form>
       <p class="welcome-or"><span>or</span></p>
       <button class="button button-ghost" id="guestBtn" type="button">Continue as guest</button>
-      <small class="welcome-note">Demo name and guest modes are not real accounts and are saved in this browser only.</small>
+      <small class="welcome-note">Reports and photos stay in this browser for now, signed in or not. Guest mode is not an account.</small>
     </div>
     <div class="welcome-card hidden" id="accountCard" role="dialog" aria-labelledby="accountTitle">
       <p class="brand-mark logo"><span class="logo-text">Civic<span>Pulse</span></span></p>
