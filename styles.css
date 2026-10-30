@@ -54,7 +54,7 @@ body:not(.gated) .site-header,body:not(.gated) main{animation:fade .4s ease both
 .logo-mark{width:34px;height:34px;flex:none;overflow:visible;fill:none;stroke-linecap:round;stroke-linejoin:round}
 .logo-mark .ring{stroke:var(--mint);stroke-width:2.2}.logo-mark .ripple{stroke:var(--mint);stroke-width:1.6;transform-origin:16px 16px;animation:ripple 2.4s ease-out infinite}
 .logo-mark .pin{stroke:var(--blue);stroke-width:2.1;transform-origin:16px 16px;animation:pin-drop 2.4s ease-out infinite}.logo-mark .pin-dot{fill:var(--blue);stroke:none;transform-origin:16px 16px;animation:pin-drop 2.4s ease-out infinite}
-.logo-text{font-size:23px}.logo-text span{color:var(--ink)}
+.logo-text{font-size:23px}.logo .logo-text,.logo .logo-text span{color:var(--ink)}
 .logo:hover .logo-mark{transform:scale(1.1) rotate(-6deg)}.logo-mark{transition:transform .25s}
 .brand-mark.logo{margin:0 0 18px}.brand-mark .logo-text{font-size:26px}.brand-mark .logo-mark{width:40px;height:40px}
 .welcome .brand-mark .logo-text{color:#f2f2f2}
