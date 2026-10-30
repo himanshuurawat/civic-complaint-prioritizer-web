@@ -24,6 +24,12 @@
     try { data = await res.json(); } catch (e) { /* empty body */ }
     return { ok: res.ok, status: res.status, data: data || {} };
   }
+  // Send auth emails back to the site the person is on. Only known deployed addresses are used;
+  // anything else (previews, local files) falls back to the project's default Site URL.
+  const TRUSTED_ORIGINS = ["https://civicpulse-demo.pages.dev", "https://yourlocality.pages.dev"];
+  function redirectQuery() {
+    return TRUSTED_ORIGINS.indexOf(location.origin) !== -1 ? "?redirect_to=" + encodeURIComponent(location.origin + "/") : "";
+  }
   function friendly(r) {
     const code = r.data.error_code || r.data.code || "";
     if (code === "invalid_credentials") return "That email or password is not right.";
@@ -84,7 +90,7 @@
     const btn = $("accSubmit"); btn.disabled = true;
     try {
       if (mode === "signup") {
-        const r = await api("/auth/v1/signup", { email: email, password: password });
+        const r = await api("/auth/v1/signup" + redirectQuery(), { email: email, password: password });
         if (!r.ok) { say(friendly(r), true); return; }
         if (r.data.access_token) { saveSession(r.data); enterAs(email); return; }
         say("Almost done. If this email can be used, we sent a confirmation link. Open it, then sign in here.");
@@ -101,7 +107,7 @@
     const email = $("accEmail").value.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { say("Type your email above first.", true); return; }
     try {
-      const r = await api("/auth/v1/recover", { email: email });
+      const r = await api("/auth/v1/recover" + redirectQuery(), { email: email });
       say(r.ok ? "If that email has an account, a reset link is on its way." : friendly(r), !r.ok);
     } catch (e) { say("Could not reach the sign-in service.", true); }
   });
