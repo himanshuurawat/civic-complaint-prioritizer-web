@@ -46,8 +46,8 @@ body.gated .site-header,body.gated main,body.gated footer,body.gated .modal-back
 body:not(.gated) .site-header,body:not(.gated) main{animation:fade .4s ease both}
 @media(max-width:360px){.welcome-card{padding:26px 20px}.welcome-card h1{font-size:28px}}
 @media(max-width:340px){nav{gap:5px}.brand{font-size:15px}.theme-toggle{width:28px;height:28px}.login-link{font-size:12px}.button-small{padding:8px 8px;font-size:11px}}
-@media(max-width:480px){.brand{font-size:18px}nav{gap:8px}.site-header{padding:0 4%;gap:8px}}
-@media(max-width:340px){.brand{font-size:15px}nav{gap:5px}.site-header{gap:4px}}
+@media(max-width:480px){.brand{font-size:18px}nav{gap:6px}.site-header{padding:0 10px;gap:8px}.logo{gap:6px}.theme-toggle{width:32px;height:32px;font-size:15px}.login-link{font-size:13px}.button-small{padding:8px 10px;font-size:12px}}
+@media(max-width:340px){.brand{font-size:15px}nav{gap:5px}.site-header{gap:4px}.logo{gap:5px}.theme-toggle{width:28px;height:28px}.login-link{font-size:12px}.button-small{padding:8px 8px;font-size:11px}}
 
 /* Logo */
 .logo{display:inline-flex;align-items:center;gap:9px;text-decoration:none;color:var(--ink);font-weight:800;letter-spacing:-.5px}
@@ -91,7 +91,7 @@ body:not(.gated) .site-header,body:not(.gated) main{animation:fade .4s ease both
 .report-form .button{width:max-content}
 .issue-photos{position:relative;margin:-24px -24px 16px;height:150px;border-radius:12px 12px 0 0;overflow:hidden}.issue-photos img{width:100%;height:100%;object-fit:cover;display:block}.issue-photos .more{position:absolute;right:8px;bottom:8px;background:#000b;color:#fff;font-size:12px;font-weight:800;padding:4px 8px;border-radius:20px}
 @media(max-width:800px){.rf-row{grid-template-columns:1fr}.report-intro h2{font-size:32px}.report-form{padding:22px}.hero h1{font-size:40px}}
-@media(max-width:480px){.logo-text{font-size:19px}.logo-mark{width:28px;height:28px}}
+@media(max-width:480px){.logo-text{font-size:16px}.logo-mark{width:26px;height:26px}}
 @media(max-width:340px){.logo-text{font-size:16px}.logo-mark{width:24px;height:24px}.logo{gap:5px}}
 .dept-chip i.dot{width:12px;height:12px;border-radius:50%;flex:none;font-size:0}.d-roads{background:#f5a623}.d-waste{background:#43d9ad}.d-water{background:#4aa8ff}.d-lights{background:#f2d64b}.d-safety{background:#ff6b6b}
 .dept-chip span{height:100%;box-sizing:border-box}main section{scroll-margin-top:84px}
