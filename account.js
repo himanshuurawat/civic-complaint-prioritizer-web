@@ -35,6 +35,7 @@
   }
   function nameFrom(email) { return String(email || "").split("@")[0].slice(0, 40) || "Resident"; }
   function open() { welcomeCard.classList.add("hidden"); card.classList.remove("hidden"); setMode("signin"); $("accEmail").focus(); }
+  window.civicOpenAccount = open;
   function close() { card.classList.add("hidden"); welcomeCard.classList.remove("hidden"); }
   function setMode(m) {
     mode = m; say("");

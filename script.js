@@ -193,7 +193,7 @@ renderIssues();
     document.body.classList.remove("gated");
     const user = currentUser();
     greeting.textContent = user && user.name ? "Hi, " + user.name + "." : "";
-    signOutBtn.textContent = "Sign out";
+    signOutBtn.textContent = user && user.account ? "Sign out" : "Sign in";
     window.scrollTo(0, 0);
   }
   function showWelcome() {
@@ -209,13 +209,19 @@ renderIssues();
   }
   window.civicEnter = enter;
   document.getElementById("guestBtn").addEventListener("click", () => enter("Guest"));
-  // The header button now signs out and returns to the entry page.
+  // Header button: a real account signs out; a guest is taken to the real sign-in card.
   signOutBtn.addEventListener("click", event => {
     if (document.body.classList.contains("gated")) return;
     event.stopImmediatePropagation();
-    try { localStorage.removeItem("civicUser"); sessionStorage.removeItem("civicEntered"); } catch (error) { /* ignore */ }
-    if (window.civicSignOut) window.civicSignOut();
-    showWelcome();
+    const user = currentUser();
+    if (user && user.account) {
+      try { localStorage.removeItem("civicUser"); sessionStorage.removeItem("civicEntered"); } catch (error) { /* ignore */ }
+      if (window.civicSignOut) window.civicSignOut();
+      showWelcome();
+    } else {
+      showWelcome();
+      if (window.civicOpenAccount) window.civicOpenAccount();
+    }
   }, true);
   if (hasEntered()) showApp(); else signOutBtn.textContent = "Sign in";
 })();
