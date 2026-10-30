@@ -2,6 +2,8 @@
 
 A static HTML, CSS, and JavaScript website that lets civilians view local civic issues and submit reports for authority review.
 
+The site is branded **YourLocality** (formerly CivicPulse).
+
 ## Current MVP
 
 - Community issue board with department filters
@@ -27,3 +29,4 @@ Open `index.html` in a browser. No Python, server, or package installation is re
 - A shared database and photo storage with access rules (Row Level Security)
 - Authority login and response dashboard
 - Maps, images, status tracking, and notifications
+
