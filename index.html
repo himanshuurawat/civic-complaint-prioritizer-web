@@ -61,6 +61,7 @@
     <nav aria-label="Main navigation">
       <a href="#top" id="navHome">Home</a>
       <button class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch theme">\u263e</button>
+            <button class="user-chip hidden" id="userChip" type="button" aria-label="Your account"></button>
       <button class="login-link" id="openAuth" type="button">Sign in</button>
       <button class="button button-small" id="navBoard" type="button">Browse an area</button>
     </nav>
@@ -200,6 +201,24 @@
         <p class="form-note" id="nameMessage" role="status"></p>
       </form>
       <p class="welcome-note"><button class="login-link" id="nameCancel" type="button">Not now</button></p>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="acctModal" aria-hidden="true">
+    <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="acctTitle">
+      <h2 id="acctTitle">Your account</h2>
+      <p>Only you can see this page. Your email and password are never shown to anyone else.</p>
+      <dl class="acct-rows">
+        <div><dt>Username</dt><dd id="acctUsername">-</dd></div>
+        <div><dt>Email</dt><dd id="acctEmail">-</dd></div>
+        <div><dt>Password</dt><dd>Never shown. Set a new one below.</dd></div>
+      </dl>
+      <form id="acctPassForm">
+        <label>New password<input id="acctPass" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Confirm new password<input id="acctPass2" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="button" type="submit">Change password</button>
+        <p class="form-note" id="acctMessage" role="status"></p>
+      </form>
+      <p class="welcome-note"><button class="login-link" id="acctClose" type="button">Close</button></p>
     </section>
   </div>
   <script src="backend.js"></script>
