@@ -52,15 +52,38 @@
     $("accLinks").classList.toggle("hidden", rs);
     $("tabSignin").classList.toggle("active", !up); $("tabSignup").classList.toggle("active", up);
     $("tabSignin").setAttribute("aria-selected", String(!up)); $("tabSignup").setAttribute("aria-selected", String(up));
+    $("accUserWrap").classList.toggle("hidden", !up);
+    $("accUsername").required = up;
     $("accConfirmWrap").classList.toggle("hidden", !(up || rs));
     $("accountTitle").textContent = rs ? "Set a new password" : up ? "Create account" : "Sign in";
     $("accSubmit").textContent = rs ? "Save new password" : up ? "Create account" : "Sign in";
     $("accPassword").autocomplete = (up || rs) ? "new-password" : "current-password";
     $("accForgot").classList.toggle("hidden", up);
   }
-  function enterAs(email) {
+  // Unique usernames: new accounts carry one from signup, older accounts are
+  // asked once after sign-in. Never blocks entering; "Not now" just asks again later.
+  async function ensureUsername() {
+    if (!window.civicBackend || !window.civicBackend.getClaimedUsername) return null;
+    let claimed = null;
+    try { claimed = await window.civicBackend.getClaimedUsername(); } catch (e) { return null; }
+    if (claimed) return claimed;
+    try {
+      const pending = await window.civicBackend.getPendingUsername();
+      if (pending) {
+        const c = await window.civicBackend.claimUsername(pending);
+        if (c.ok) return c.username;
+      }
+    } catch (e) { /* fall through to asking */ }
+    if (window.civicAskUsername) {
+      try { return await window.civicAskUsername(); } catch (e) { return null; }
+    }
+    return null;
+  }
+  async function enterAs(email) {
     close(); form.reset();
     if (window.civicEnter) window.civicEnter(nameFrom(email), true);
+    const username = await ensureUsername();
+    if (username && window.civicEnter) window.civicEnter(username, true);
   }
 
   $("accountBtn").addEventListener("click", open);
@@ -90,7 +113,13 @@
     const btn = $("accSubmit"); btn.disabled = true;
     try {
       if (mode === "signup") {
-        const r = await api("/auth/v1/signup" + redirectQuery(), { email: email, password: password });
+        const username = $("accUsername").value.trim().toLowerCase();
+        if (!/^[a-z0-9_]{3,20}$/.test(username)) { say("Usernames use 3-20 lowercase letters, numbers or _.", true); return; }
+        if (window.civicBackend && window.civicBackend.usernameAvailable) {
+          const a = await window.civicBackend.usernameAvailable(username);
+          if (a.ok && !a.available) { say("That username is taken. Try another.", true); return; }
+        }
+        const r = await api("/auth/v1/signup" + redirectQuery(), { email: email, password: password, data: { username: username } });
         if (!r.ok) { say(friendly(r), true); return; }
         if (r.data.access_token) { saveSession(r.data); enterAs(email); return; }
         say("Almost done. If this email can be used, we sent a confirmation link. Open it, then sign in here.");
@@ -138,7 +167,10 @@
         const t = await api("/auth/v1/token?grant_type=refresh_token", { refresh_token: s.refresh_token });
         if (t.ok) { saveSession(t.data); r = { ok: true, data: t.data.user || {} }; }
       }
-      if (r.ok && r.data.email) { if (window.civicEnter) window.civicEnter(nameFrom(r.data.email), true); }
+      if (r.ok && r.data.email) {
+        if (window.civicEnter) window.civicEnter(nameFrom(r.data.email), true);
+        ensureUsername().then(username => { if (username && window.civicEnter) window.civicEnter(username, true); });
+      }
       else if (!r.ok && (r.status === 401 || r.status === 403 || r.status === 400)) clearSession();
     } catch (e) { /* offline: stay on the welcome page, keep the session */ }
   })();
