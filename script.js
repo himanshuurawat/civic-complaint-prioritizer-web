@@ -5,34 +5,74 @@
 // autoplay; otherwise it fires on the visitor's first tap instead.
 (function () {
   var splash = document.getElementById('splash');
+  // Shared chime: one Audio for the whole intro. Plays when the browser allows
+  // autoplay; otherwise the visitor's deliberate tap during the splash or the
+  // intro scene plays it once. Never fires on unrelated later taps.
+  window.ylChime = (function () {
+    var a = new Audio('chime.mp3');
+    a.volume = 0.7;
+    var played = false;
+    return {
+      play: function () {
+        if (played) return Promise.resolve(false);
+        return a.play().then(function () { played = true; return true; }, function () { return false; });
+      },
+      hasPlayed: function () { return played; }
+    };
+  })();
   if (!splash) return;
   var reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || document.body.classList.contains('motion-light');
-  if (reduced || sessionStorage.getItem('ylSplash')) { splash.remove(); document.body.classList.remove('splashing'); return; }
+  // Intro plays on every fresh visit (each page load); in-app navigation never
+  // re-runs this module, so it cannot nag between views.
+  if (reduced) { splash.remove(); document.body.classList.remove('splashing'); return; }
   document.body.classList.add('splashing');
-  var chime = new Audio('chime.mp3');
-  chime.volume = 0.7;
-  var chimed = false;
-  var armed = true; // first-tap fallback only lives while the splash does
+  var armed = true; // tap fallback lives while the splash or intro scene is up
+  var cue = null;
+  function introVisible() {
+    return document.body.classList.contains('splashing') || document.body.classList.contains('scene-playing');
+  }
+  function hideCue() { if (cue) { cue.remove(); cue = null; } }
+  function showCue() {
+    if (cue || window.ylChime.hasPlayed()) return;
+    cue = document.createElement('button');
+    cue.type = 'button';
+    cue.className = 'sound-cue';
+    cue.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Tap for sound</span>';
+    document.body.appendChild(cue);
+  }
   function onFirstTap() {
-    document.removeEventListener('pointerdown', onFirstTap);
-    if (armed && !chimed) { chime.play().then(function () { chimed = true; }).catch(function () {}); }
+    if (!armed || window.ylChime.hasPlayed()) return;
+    if (!introVisible()) return;
+    window.ylChime.play().then(function (ok) { if (ok) hideCue(); });
   }
-  function playChime() {
-    if (chimed) return;
-    chime.play().then(function () { chimed = true; }).catch(function () {
-      // Autoplay with sound blocked before interaction: only a tap DURING the
-      // splash may still sync the chime to the reveal; afterwards stay silent.
-      document.addEventListener('pointerdown', onFirstTap);
+  document.addEventListener('pointerdown', onFirstTap);
+  window.ylChime.play().catch(function () {});
+  // Autoplay blocked: offer the deliberate tap control while the intro is up.
+  setTimeout(function () {
+    if (!window.ylChime.hasPlayed() && introVisible()) showCue();
+    // The intro scene may start right after the splash; keep offering until reveal.
+    var watch = setInterval(function () {
+      if (window.ylChime.hasPlayed()) { hideCue(); clearInterval(watch); return; }
+      if (document.body.classList.contains('scene-playing')) showCue();
+      if (document.body.classList.contains('entering') || (!introVisible() && !cue)) clearInterval(watch);
+      if (!introVisible() && !document.body.classList.contains('scene-playing') && !document.body.classList.contains('splashing')) { /* gated visitor: cue returns with the scene */ }
+    }, 250);
+    // Disarm for good once the main page is revealed.
+    var obs = new MutationObserver(function () {
+      if (document.body.classList.contains('entering')) {
+        armed = false;
+        document.removeEventListener('pointerdown', onFirstTap);
+        hideCue();
+        clearInterval(watch);
+        obs.disconnect();
+      }
     });
-  }
-  playChime();
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  }, 600);
   var done = false;
   function end() {
     if (done) return;
     done = true;
-    armed = false;
-    document.removeEventListener('pointerdown', onFirstTap);
-    try { sessionStorage.setItem('ylSplash', '1'); } catch (e) {}
     splash.classList.add('splash-exit');
     splash.addEventListener('animationend', function () { splash.remove(); });
     setTimeout(function () {
@@ -497,21 +537,24 @@
 
 
 // Problem-scene moment: after sign-in/guest, a brief full-screen visual of what
-// the site is about, then it lifts away into the main page. Once per session,
-// skipped under OS reduced-motion.
+// the site is about, then it lifts away into the main page. Plays on every fresh
+// visit (page load), at most once per load, skipped under OS reduced-motion.
 (function () {
   var scene = document.getElementById('introScene');
   if (!scene) return;
   var reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || document.body.classList.contains('motion-light');
+  var playedThisLoad = false;
   window.civicPlayScene = function (onReveal) {
-    var skip = reduced || (function () { try { return sessionStorage.getItem('ylScene'); } catch (e) { return null; } })();
-    if (skip) { scene.remove(); onReveal(); return; }
+    if (reduced || playedThisLoad) { if (!playedThisLoad) { playedThisLoad = true; } scene.remove(); onReveal(); return; }
+    playedThisLoad = true;
+    // The tap that entered (guest / sign-in / returning click) is a live user
+    // gesture: this is the reliable moment the chime is allowed to sound.
+    if (window.ylChime) window.ylChime.play().then(function (ok) { if (ok) { var c = document.querySelector('.sound-cue'); if (c) c.remove(); } });
     document.body.classList.add('scene-playing');
     var done = false;
     function end() {
       if (done) return;
       done = true;
-      try { sessionStorage.setItem('ylScene', '1'); } catch (e) {}
       scene.classList.add('scene-exit');
       onReveal(); // main page entrance begins as the scene lifts
       setTimeout(function () {
@@ -630,14 +673,59 @@
     }
   }
   function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
+  // Desktop drives: vertical wheel slides the strip, mouse drag grabs it.
+  // Card click is suppressed only after a real drag, so taps still open.
+  var suppressClick = false;
+  grid.addEventListener('click', function (e) {
+    if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  grid.addEventListener('wheel', function (e) {
+    if (mqMobile.matches) return;
+    var d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (!d) return;
+    var max = grid.scrollWidth - grid.clientWidth;
+    if ((d < 0 && grid.scrollLeft <= 0) || (d > 0 && grid.scrollLeft >= max)) return; // let the page scroll at the ends
+    e.preventDefault();
+    grid.scrollLeft += d;
+  }, { passive: false });
+  var drag = null;
+  grid.addEventListener('pointerdown', function (e) {
+    if (mqMobile.matches || e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, sl: grid.scrollLeft, moved: false };
+  });
+  grid.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 7) {
+      drag.moved = true;
+      grid.style.scrollSnapType = 'none'; // snap must not fight an active drag
+      try { grid.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (drag.moved) grid.scrollLeft = drag.sl - dx;
+  });
+  function endDrag() {
+    if (drag && drag.moved) {
+      suppressClick = true;
+      setTimeout(function () { suppressClick = false; }, 50);
+      grid.style.scrollSnapType = '';
+    }
+    drag = null;
+  }
+  grid.addEventListener('pointerup', endDrag);
+  grid.addEventListener('pointercancel', endDrag);
   function enable() {
     if (active) return;
     if (document.body.classList.contains('motion-light')) return;
     active = true;
     document.body.classList.add('orbit-live');
     grid.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    // Warm the full-screen photos so the first category switch crossfades
+    // instead of fetching + decoding mid-swipe (the visible white flash).
+    heroImgs.forEach(function (p) {
+      var im = p.querySelector('img');
+      if (im && im.decode) im.decode().catch(function () {});
+    });
     if (mqMobile.addEventListener) mqMobile.addEventListener('change', function () { clearModeStyles(); onScroll(); });
     update();
     if (mqMobile.matches && !drifted) {
