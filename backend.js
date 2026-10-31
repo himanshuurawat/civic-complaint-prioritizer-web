@@ -6,6 +6,7 @@
   const PUBLISHABLE_KEY = "sb_publishable_xWZz3eQGlEdptnwp1hBK1g_LU7Vtkgu";
   const SESSION_KEY = "civicSession"; // same key account.js uses
   const BUCKET = "report-photos";
+  const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/; // lowercase letters, numbers, underscores
 
   function loadSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; } }
   function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ } }
@@ -99,20 +100,64 @@
     signedInSession: signedInSession,
 
 
-    async getPublicName() {
-      const s = await signedInSession();
-      if (!s) return null;
-      const r = await rest("/auth/v1/user", { token: s.token });
-      if (!r.ok) return null;
-      const name = r.data && r.data.user_metadata && r.data.user_metadata.display_name;
-      return (typeof name === "string" && name.trim().length >= 2) ? name.trim().slice(0, 40) : null;
+    // Unique usernames live in the public.usernames table (see supabase/usernames.sql).
+    // The server's UNIQUE rule is what actually enforces one-per-name; the client
+    // checks first only to give a friendlier message. If the table is not set up
+    // yet these calls simply report not-ok and the site keeps working without them.
+
+    async usernameAvailable(username) {
+      const r = await rest("/rest/v1/usernames?select=username&username=eq." + encodeURIComponent(username) + "&limit=1");
+      if (!r.ok) return { ok: false, status: r.status, error: r.error };
+      return { ok: true, available: !(Array.isArray(r.data) && r.data.length) };
     },
 
-    async setPublicName(name) {
+    // The username this account has actually claimed. Only this is used as the
+    // public identity on new reports and comments.
+    async getClaimedUsername() {
+      const s = await signedInSession();
+      if (!s) return null;
+      const r = await rest("/rest/v1/usernames?select=username&user_id=eq." + encodeURIComponent(s.userId) + "&limit=1", { token: s.token });
+      if (r.ok && Array.isArray(r.data) && r.data.length && typeof r.data[0].username === "string") return r.data[0].username;
+      return null;
+    },
+
+    // A username chosen at signup but not claimed yet (waiting on email confirmation).
+    async getPendingUsername() {
+      const s = await signedInSession();
+      if (!s) return null;
+      const u = await rest("/auth/v1/user", { token: s.token });
+      const meta = u.ok && u.data && u.data.user_metadata && u.data.user_metadata.username;
+      return (typeof meta === "string" && USERNAME_PATTERN.test(meta)) ? meta : null;
+    },
+
+    // Prefill suggestion for the chooser, from an earlier public name if one exists.
+    async suggestUsername() {
+      const s = await signedInSession();
+      if (!s) return null;
+      const u = await rest("/auth/v1/user", { token: s.token });
+      const meta = (u.ok && u.data && u.data.user_metadata) || {};
+      const raw = meta.username || meta.display_name || "";
+      const cleaned = String(raw).toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 20);
+      return USERNAME_PATTERN.test(cleaned) ? cleaned : null;
+    },
+
+    async claimUsername(username) {
       const s = await signedInSession();
       if (!s) return { ok: false, error: "signin" };
-      const r = await rest("/auth/v1/user", { method: "PUT", token: s.token, body: { data: { display_name: name } } });
-      return r.ok ? { ok: true } : { ok: false, status: r.status, error: "save" };
+      const r = await rest("/rest/v1/usernames", {
+        method: "POST",
+        token: s.token,
+        prefer: "return=representation",
+        body: { user_id: s.userId, username: username }
+      });
+      if (!r.ok) {
+        const code = r.data && r.data.code;
+        if (r.status === 409 || code === "23505") return { ok: false, error: "taken" };
+        return { ok: false, status: r.status, error: "save" };
+      }
+      // Keep auth metadata in step so future sessions see the same identity.
+      await rest("/auth/v1/user", { method: "PUT", token: s.token, body: { data: { username: username } } });
+      return { ok: true, username: username };
     },
 
     async listReports(area, category) {
