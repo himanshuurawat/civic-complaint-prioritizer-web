@@ -5,34 +5,88 @@
 // autoplay; otherwise it fires on the visitor's first tap instead.
 (function () {
   var splash = document.getElementById('splash');
+  // Shared chime: one Audio for the whole intro. Plays when the browser allows
+  // autoplay; otherwise the visitor's deliberate tap during the splash or the
+  // intro scene plays it once. Never fires on unrelated later taps.
+  window.ylChime = (function () {
+    // WebAudio path: a plain fetch (no media-element quirks) + decode once,
+    // then a BufferSource on each allowed play. Browsers still require one
+    // deliberate tap before sound; decode happens up front so the tap plays
+    // instantly.
+    var ctx = null, buf = null, ready = null, played = false;
+    function prepare() {
+      if (!ready) {
+        ready = fetch('chime.mp3')
+          .then(function (r) { return r.arrayBuffer(); })
+          .then(function (ab) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            return ctx.decodeAudioData(ab);
+          })
+          .then(function (b) { buf = b; return true; }, function () { return false; });
+      }
+      return ready;
+    }
+    prepare(); // decode early; this makes no sound on its own
+    return {
+      play: function () {
+        if (played) return Promise.resolve(false);
+        return prepare().then(function (ok) {
+          if (!ok || played) return false;
+          function start() {
+            if (played) return true;
+            var src = ctx.createBufferSource();
+            var gain = ctx.createGain();
+            gain.gain.value = 0.7;
+            src.buffer = buf;
+            src.connect(gain);
+            gain.connect(ctx.destination);
+            src.start();
+            played = true;
+            return true;
+          }
+          if (ctx.state === 'running') return start();
+          return ctx.resume().then(start, function () { return false; });
+        });
+      },
+      hasPlayed: function () { return played; }
+    };
+  })();
   if (!splash) return;
   var reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || document.body.classList.contains('motion-light');
-  if (reduced || sessionStorage.getItem('ylSplash')) { splash.remove(); document.body.classList.remove('splashing'); return; }
+  // Intro plays on every fresh visit (each page load); in-app navigation never
+  // re-runs this module, so it cannot nag between views.
+  if (reduced) { splash.remove(); document.body.classList.remove('splashing'); return; }
   document.body.classList.add('splashing');
-  var chime = new Audio('chime.mp3');
-  chime.volume = 0.7;
-  var chimed = false;
-  var armed = true; // first-tap fallback only lives while the splash does
+  // Sound by default: try to play the chime as the intro starts. Where the
+  // browser blocks automatic sound, any tap WHILE THE INTRO IS ON SCREEN may
+  // still sync the chime to the reveal; after the intro there is no sound
+  // trigger at all - no button, no unrelated-tap audio, no bypass of browser
+  // autoplay policy.
+  var armed = true;
+  function introVisible() {
+    return document.body.classList.contains('splashing') || document.body.classList.contains('scene-playing');
+  }
   function onFirstTap() {
+    if (!armed || window.ylChime.hasPlayed() || !introVisible()) return;
+    window.ylChime.play().then(function (ok) { if (ok) disarm(); });
+  }
+  function disarm() {
+    if (!armed) return;
+    armed = false;
     document.removeEventListener('pointerdown', onFirstTap);
-    if (armed && !chimed) { chime.play().then(function () { chimed = true; }).catch(function () {}); }
   }
-  function playChime() {
-    if (chimed) return;
-    chime.play().then(function () { chimed = true; }).catch(function () {
-      // Autoplay with sound blocked before interaction: only a tap DURING the
-      // splash may still sync the chime to the reveal; afterwards stay silent.
-      document.addEventListener('pointerdown', onFirstTap);
-    });
-  }
-  playChime();
+  document.addEventListener('pointerdown', onFirstTap);
+  window.ylChime.play().catch(function () {});
+  // Once the intro is over, the sound offer ends with it.
+  var watch = setInterval(function () {
+    if (window.ylChime.hasPlayed() || (!introVisible() && (document.body.classList.contains('entering') || document.body.classList.contains('gated') || document.body.classList.contains('home-active')))) {
+      disarm(); clearInterval(watch);
+    }
+  }, 250);
   var done = false;
   function end() {
     if (done) return;
     done = true;
-    armed = false;
-    document.removeEventListener('pointerdown', onFirstTap);
-    try { sessionStorage.setItem('ylSplash', '1'); } catch (e) {}
     splash.classList.add('splash-exit');
     splash.addEventListener('animationend', function () { splash.remove(); });
     setTimeout(function () {
@@ -250,12 +304,24 @@
         const img = new Image();
         img.onerror = () => reject(new Error("decode"));
         img.onload = () => {
-          const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+          // Compress for upload: cap the long edge, then step JPEG quality
+          // down until the photo is small enough. Turns multi-MB phone
+          // shots into roughly 100-250KB uploads while keeping complaint
+          // details (cracks, signs, labels) legible. EXIF orientation is
+          // honored by the browser's image decode.
+          const MAX_EDGE = 1280;
+          const TARGET_CHARS = 340000; // ~250KB of JPEG, under the 400k send cap
+          const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
           const canvas = document.createElement("canvas");
           canvas.width = Math.max(1, Math.round(img.width * scale));
           canvas.height = Math.max(1, Math.round(img.height * scale));
           canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.72));
+          const qualities = [0.8, 0.72, 0.64, 0.56, 0.48];
+          for (const q of qualities) {
+            const out = canvas.toDataURL("image/jpeg", q);
+            if (out.length <= TARGET_CHARS) { resolve(out); return; }
+          }
+          resolve(null); // still too large at the lowest quality - caller tells the user
         };
         img.src = reader.result;
       };
@@ -266,17 +332,21 @@
     const note = $("formMessage");
     const files = Array.from($("photoInput").files || []);
     $("photoInput").value = "";
-    let skipped = 0;
+    let skipped = 0, tooComplex = 0;
     for (const file of files) {
       if (photos.length >= MAX_PHOTOS) { skipped++; continue; }
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) { skipped++; continue; }
       try {
         const data = await shrinkPhoto(file);
+        if (data === null) { tooComplex++; continue; }
         if (PHOTO_PATTERN.test(data) && data.length < 400000) photos.push(data); else skipped++;
       } catch (e) { skipped++; }
     }
     renderPhotos();
-    note.textContent = skipped ? "Some files were skipped. Use up to " + MAX_PHOTOS + " JPG, PNG or WebP photos under 15 MB." : "";
+    const msgs = [];
+    if (skipped) msgs.push("Some files were skipped. Use up to " + MAX_PHOTOS + " JPG, PNG or WebP photos under 15 MB.");
+    if (tooComplex) msgs.push(tooComplex === 1 ? "That photo stayed too large even after compression - try a closer crop of the problem." : tooComplex + " photos stayed too large even after compression - try a closer crop of the problem.");
+    note.textContent = msgs.join(" ");
   });
   $("reportForm").addEventListener("submit", async event => {
     event.preventDefault();
@@ -497,21 +567,24 @@
 
 
 // Problem-scene moment: after sign-in/guest, a brief full-screen visual of what
-// the site is about, then it lifts away into the main page. Once per session,
-// skipped under OS reduced-motion.
+// the site is about, then it lifts away into the main page. Plays on every fresh
+// visit (page load), at most once per load, skipped under OS reduced-motion.
 (function () {
   var scene = document.getElementById('introScene');
   if (!scene) return;
   var reduced = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || document.body.classList.contains('motion-light');
+  var playedThisLoad = false;
   window.civicPlayScene = function (onReveal) {
-    var skip = reduced || (function () { try { return sessionStorage.getItem('ylScene'); } catch (e) { return null; } })();
-    if (skip) { scene.remove(); onReveal(); return; }
+    if (reduced || playedThisLoad) { if (!playedThisLoad) { playedThisLoad = true; } scene.remove(); onReveal(); return; }
+    playedThisLoad = true;
+    // The tap that entered (guest / sign-in / returning click) is a live user
+    // gesture: this is the reliable moment the chime is allowed to sound.
+    if (window.ylChime) window.ylChime.play();
     document.body.classList.add('scene-playing');
     var done = false;
     function end() {
       if (done) return;
       done = true;
-      try { sessionStorage.setItem('ylScene', '1'); } catch (e) {}
       scene.classList.add('scene-exit');
       onReveal(); // main page entrance begins as the scene lifts
       setTimeout(function () {
@@ -630,14 +703,59 @@
     }
   }
   function onScroll() { if (!raf) raf = requestAnimationFrame(update); }
+  // Desktop drives: vertical wheel slides the strip, mouse drag grabs it.
+  // Card click is suppressed only after a real drag, so taps still open.
+  var suppressClick = false;
+  grid.addEventListener('click', function (e) {
+    if (suppressClick) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  grid.addEventListener('wheel', function (e) {
+    if (mqMobile.matches) return;
+    var d = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (!d) return;
+    var max = grid.scrollWidth - grid.clientWidth;
+    if ((d < 0 && grid.scrollLeft <= 0) || (d > 0 && grid.scrollLeft >= max)) return; // let the page scroll at the ends
+    e.preventDefault();
+    grid.scrollLeft += d;
+  }, { passive: false });
+  var drag = null;
+  grid.addEventListener('pointerdown', function (e) {
+    if (mqMobile.matches || e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { x: e.clientX, sl: grid.scrollLeft, moved: false };
+  });
+  grid.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.x;
+    if (!drag.moved && Math.abs(dx) > 7) {
+      drag.moved = true;
+      grid.style.scrollSnapType = 'none'; // snap must not fight an active drag
+      try { grid.setPointerCapture(e.pointerId); } catch (err) {}
+    }
+    if (drag.moved) grid.scrollLeft = drag.sl - dx;
+  });
+  function endDrag() {
+    if (drag && drag.moved) {
+      suppressClick = true;
+      setTimeout(function () { suppressClick = false; }, 50);
+      grid.style.scrollSnapType = '';
+    }
+    drag = null;
+  }
+  grid.addEventListener('pointerup', endDrag);
+  grid.addEventListener('pointercancel', endDrag);
   function enable() {
     if (active) return;
     if (document.body.classList.contains('motion-light')) return;
     active = true;
     document.body.classList.add('orbit-live');
     grid.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
+    // Warm the full-screen photos so the first category switch crossfades
+    // instead of fetching + decoding mid-swipe (the visible white flash).
+    heroImgs.forEach(function (p) {
+      var im = p.querySelector('img');
+      if (im && im.decode) im.decode().catch(function () {});
+    });
     if (mqMobile.addEventListener) mqMobile.addEventListener('change', function () { clearModeStyles(); onScroll(); });
     update();
     if (mqMobile.matches && !drifted) {
