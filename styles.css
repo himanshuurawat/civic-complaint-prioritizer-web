@@ -343,11 +343,17 @@ body:not(.home-active) .swipe-cue{display:none!important}
 }
 @media (prefers-reduced-motion:reduce){.swipe-cue svg{animation:none}}
 
-/* Desktop category cards: same photo-card treatment as the approved mobile
-   design (the shell/photo rules above are scoped to max-width:640px, which
-   left desktop cards unconstrained). Disjoint from the mobile block. */
+/* Desktop: split hero - intro left, all six photo cards in a 3x2 grid right.
+   The photo-card treatment matches the approved mobile design (the shell/photo
+   rules above are scoped to max-width:640px, which left desktop cards
+   unconstrained). No clipped cards, no horizontal scroll, wide screen used
+   intentionally. Disjoint from the mobile block. */
 @media (min-width:641px){
-.home-hero .card-shell{position:relative;display:grid;grid-template-rows:1fr auto;height:340px;background:#0b0e14;border:1px solid var(--line);border-radius:16px;overflow:hidden;text-align:left;box-shadow:0 26px 60px #00000066}
+.home-hero-inner{display:grid;grid-template-columns:minmax(300px,5fr) 7fr;align-items:center;align-content:center;column-gap:56px;padding:104px 8% 40px}
+.home-hero .intro{padding:0;max-width:520px}
+.home-hero .feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;overflow:visible;scroll-snap-type:none;padding:0;margin:0;perspective:none}
+.home-hero .feature-card{flex:initial;width:auto;max-width:none}
+.home-hero .card-shell{position:relative;display:grid;grid-template-rows:1fr auto;height:clamp(210px,32vh,320px);background:#0b0e14;border:1px solid var(--line);border-radius:16px;overflow:hidden;text-align:left;box-shadow:0 26px 60px #00000066}
 .home-hero .card-photo{position:absolute;inset:0;display:block}
 .home-hero .card-photo img{width:100%;height:100%;object-fit:cover}
 .home-hero .feature-card{background:none;border:0}
@@ -356,4 +362,15 @@ body:not(.home-active) .swipe-cue{display:none!important}
 .home-hero .card-shell .meta{position:relative;z-index:2;padding:64px 18px 16px;background:linear-gradient(180deg,rgba(3,5,9,0),rgba(3,5,9,.64) 55%,rgba(3,5,9,.82))}
 .home-hero .card-shell .meta strong{color:#fff}
 .home-hero .card-shell .meta .line{color:#c9d2de}
+.home-hero .intro-note{grid-column:1/-1;padding:0;margin:22px 0 0;max-width:none}
+/* Header floats with a dark blur backdrop so scrolled content never collides */
+body.home-active .site-header{background:rgba(4,7,12,.58);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
+/* Dark footer matching the photo canvas instead of the pale band */
+body.home-active footer{background:#05070c;color:#8fa0b5;justify-content:center;gap:8px;text-align:center;font-size:12px;padding:18px 8%}
+body.home-active footer strong{color:#c9d2de}
+}
+/* Narrow desktop / large tablet: stack intro above a full-width 3x2 card grid */
+@media (min-width:641px) and (max-width:1023px){
+.home-hero-inner{grid-template-columns:1fr;row-gap:28px;padding-top:100px}
+.home-hero .intro{max-width:600px}
 }
