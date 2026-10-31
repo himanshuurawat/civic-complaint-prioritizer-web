@@ -318,7 +318,7 @@ body.motion-light .view:not(.hidden){animation:fade .2s ease both}
 
 /* Header floats over the photo canvas on the home view */
 body.home-active .site-header{background:transparent;border-bottom-color:transparent}
-body.home-active .brand,body.home-active nav a,body.home-active .login-link{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.55)}
+body.home-active .brand,body.home-active nav a,body.home-active .login-link{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.55)}body.home-active .modal-backdrop .login-link{color:var(--blue);text-shadow:none}
 body.home-active .brand span{color:#8fc2ff}
 body.home-active .theme-toggle{border-color:rgba(255,255,255,.45);background:rgba(10,14,20,.35);color:#fff}
 
@@ -387,4 +387,3 @@ body.home-active footer strong{color:#c9d2de}
    The filled view entry animation keeps an identity transform that would
    otherwise trap fixed layers inside the scrolling view. */
 body.home-active #viewHome.view{animation:none}
-
