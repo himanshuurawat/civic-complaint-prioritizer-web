@@ -352,8 +352,9 @@
           const qualities = [0.8, 0.72, 0.64, 0.56, 0.48];
           for (const q of qualities) {
             const out = canvas.toDataURL("image/jpeg", q);
-            if (out.length <= TARGET_CHARS || q === qualities[qualities.length - 1]) { resolve(out); return; }
+            if (out.length <= TARGET_CHARS) { resolve(out); return; }
           }
+          resolve(null); // still too large at the lowest quality - caller tells the user
         };
         img.src = reader.result;
       };
@@ -364,17 +365,21 @@
     const note = $("formMessage");
     const files = Array.from($("photoInput").files || []);
     $("photoInput").value = "";
-    let skipped = 0;
+    let skipped = 0, tooComplex = 0;
     for (const file of files) {
       if (photos.length >= MAX_PHOTOS) { skipped++; continue; }
       if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) { skipped++; continue; }
       try {
         const data = await shrinkPhoto(file);
+        if (data === null) { tooComplex++; continue; }
         if (PHOTO_PATTERN.test(data) && data.length < 400000) photos.push(data); else skipped++;
       } catch (e) { skipped++; }
     }
     renderPhotos();
-    note.textContent = skipped ? "Some files were skipped. Use up to " + MAX_PHOTOS + " JPG, PNG or WebP photos under 15 MB." : "";
+    const msgs = [];
+    if (skipped) msgs.push("Some files were skipped. Use up to " + MAX_PHOTOS + " JPG, PNG or WebP photos under 15 MB.");
+    if (tooComplex) msgs.push(tooComplex === 1 ? "That photo stayed too large even after compression - try a closer crop of the problem." : tooComplex + " photos stayed too large even after compression - try a closer crop of the problem.");
+    note.textContent = msgs.join(" ");
   });
   $("reportForm").addEventListener("submit", async event => {
     event.preventDefault();
