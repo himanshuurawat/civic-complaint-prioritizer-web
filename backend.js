@@ -65,12 +65,12 @@
     return new Blob([bytes], { type: mime });
   }
 
-  async function uploadPhotos(reportId, photos, token) {
+  async function uploadPhotos(userId, reportId, photos, token) {
     const paths = [];
     for (let i = 0; i < photos.length; i++) {
       const blob = dataUrlToBlob(photos[i]);
       if (!blob) continue;
-      const path = reportId + "/" + i + ".jpg";
+      const path = userId + "/" + reportId + "/" + i + ".jpg"; // first folder = uploader identity; the storage insert policy enforces it
       let res;
       try {
         res = await fetch(SUPABASE_URL + "/storage/v1/object/" + BUCKET + "/" + path, {
@@ -130,7 +130,7 @@
       const id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2));
       let photoPaths = [];
       if (input.photos && input.photos.length) {
-        const up = await uploadPhotos(id, input.photos, s.token);
+        const up = await uploadPhotos(s.userId, id, input.photos, s.token);
         if (!up.ok) return { ok: false, error: "photos", status: up.status };
         photoPaths = up.paths;
       }
