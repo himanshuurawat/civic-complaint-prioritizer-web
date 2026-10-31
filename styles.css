@@ -390,6 +390,6 @@ body.home-active #viewHome.view{animation:none}
 
 /* Deliberate sound control: shown only while the intro is up and the browser
    blocked autoplay; a tap anywhere during the intro then plays the chime. */
-.sound-cue.in-flow{position:static;transform:none;margin:10px auto 6px;display:inline-flex;animation:none}
+.sound-cue.in-flow{position:static;transform:none;margin:10px auto 6px;display:flex;width:max-content;max-width:100%;animation:none}
 .sound-cue{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(8,12,20,.72);color:#e8f0fa;font:600 13px/1 Arial,sans-serif;letter-spacing:.4px;cursor:pointer;box-shadow:0 8px 24px #00000055;animation:fade .4s ease both}
 @media(prefers-reduced-motion:reduce){.sound-cue{animation:none}}
