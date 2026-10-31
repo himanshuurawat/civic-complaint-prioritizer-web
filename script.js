@@ -9,13 +9,44 @@
   // autoplay; otherwise the visitor's deliberate tap during the splash or the
   // intro scene plays it once. Never fires on unrelated later taps.
   window.ylChime = (function () {
-    var a = new Audio('chime.mp3');
-    a.volume = 0.7;
-    var played = false;
+    // WebAudio path: a plain fetch (no media-element quirks) + decode once,
+    // then a BufferSource on each allowed play. Browsers still require one
+    // deliberate tap before sound; decode happens up front so the tap plays
+    // instantly.
+    var ctx = null, buf = null, ready = null, played = false;
+    function prepare() {
+      if (!ready) {
+        ready = fetch('chime.mp3')
+          .then(function (r) { return r.arrayBuffer(); })
+          .then(function (ab) {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+            return ctx.decodeAudioData(ab);
+          })
+          .then(function (b) { buf = b; return true; }, function () { return false; });
+      }
+      return ready;
+    }
+    prepare(); // decode early; this makes no sound on its own
     return {
       play: function () {
         if (played) return Promise.resolve(false);
-        return a.play().then(function () { played = true; return true; }, function () { return false; });
+        return prepare().then(function (ok) {
+          if (!ok || played) return false;
+          function start() {
+            if (played) return true;
+            var src = ctx.createBufferSource();
+            var gain = ctx.createGain();
+            gain.gain.value = 0.7;
+            src.buffer = buf;
+            src.connect(gain);
+            gain.connect(ctx.destination);
+            src.start();
+            played = true;
+            return true;
+          }
+          if (ctx.state === 'running') return start();
+          return ctx.resume().then(start, function () { return false; });
+        });
       },
       hasPlayed: function () { return played; }
     };
@@ -69,10 +100,20 @@
   // tapping anything else on the page dismisses the offer without sound.
   setTimeout(function () {
     if (!window.ylChime.hasPlayed() && introVisible()) showCue();
+    var movedInline = false;
     var watch = setInterval(function () {
       if (!armed) { clearInterval(watch); return; }
       if (window.ylChime.hasPlayed()) { disarm(); clearInterval(watch); return; }
       if (introVisible()) showCue();
+      if (document.body.classList.contains('gated')) { hideCue(); return; }
+      // Intro over: park the offer inside the page flow (above the note), so
+      // it never covers text or buttons while it waits for a deliberate tap.
+      if (cue && !movedInline && document.body.classList.contains('entering')) {
+        movedInline = true;
+        var note = document.querySelector('.home-hero .intro-note');
+        cue.classList.add('in-flow');
+        if (note && note.parentNode) note.parentNode.insertBefore(cue, note);
+      }
     }, 250);
   }, 600);
   var done = false;
