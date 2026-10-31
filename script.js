@@ -40,34 +40,40 @@
     cue.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Tap for sound</span>';
     document.body.appendChild(cue);
   }
-  function onFirstTap() {
+  function onFirstTap(e) {
     if (!armed || window.ylChime.hasPlayed()) return;
-    if (!introVisible()) return;
-    window.ylChime.play().then(function (ok) { if (ok) hideCue(); });
+    if (introVisible()) {
+      // Any tap while the intro is on screen may sync the chime to the reveal.
+      window.ylChime.play().then(function (ok) { if (ok) disarm(); });
+      return;
+    }
+    // Intro over: only a tap on the sound control itself plays; any other tap
+    // just dismisses the offer - no sound from unrelated taps, ever.
+    if (e && e.target && e.target.closest && e.target.closest('.sound-cue')) {
+      window.ylChime.play().then(function (ok) { if (ok) disarm(); });
+    } else if (cue) {
+      disarm();
+    }
+  }
+  function disarm() {
+    if (!armed) return;
+    armed = false;
+    document.removeEventListener('pointerdown', onFirstTap);
+    hideCue();
   }
   document.addEventListener('pointerdown', onFirstTap);
   window.ylChime.play().catch(function () {});
-  // Autoplay blocked: offer the deliberate tap control while the intro is up.
+  // Autoplay blocked: offer the deliberate tap control. It appears with the
+  // intro and STAYS until used or dismissed - nobody should have to win a
+  // two-second race to hear the chime. Tapping the pill plays it once;
+  // tapping anything else on the page dismisses the offer without sound.
   setTimeout(function () {
     if (!window.ylChime.hasPlayed() && introVisible()) showCue();
-    // The intro scene may start right after the splash; keep offering until reveal.
     var watch = setInterval(function () {
-      if (window.ylChime.hasPlayed()) { hideCue(); clearInterval(watch); return; }
-      if (document.body.classList.contains('scene-playing')) showCue();
-      if (document.body.classList.contains('entering') || (!introVisible() && !cue)) clearInterval(watch);
-      if (!introVisible() && !document.body.classList.contains('scene-playing') && !document.body.classList.contains('splashing')) { /* gated visitor: cue returns with the scene */ }
+      if (!armed) { clearInterval(watch); return; }
+      if (window.ylChime.hasPlayed()) { disarm(); clearInterval(watch); return; }
+      if (introVisible()) showCue();
     }, 250);
-    // Disarm for good once the main page is revealed.
-    var obs = new MutationObserver(function () {
-      if (document.body.classList.contains('entering')) {
-        armed = false;
-        document.removeEventListener('pointerdown', onFirstTap);
-        hideCue();
-        clearInterval(watch);
-        obs.disconnect();
-      }
-    });
-    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }, 600);
   var done = false;
   function end() {
