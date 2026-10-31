@@ -57,65 +57,32 @@
   // re-runs this module, so it cannot nag between views.
   if (reduced) { splash.remove(); document.body.classList.remove('splashing'); return; }
   document.body.classList.add('splashing');
-  var armed = true; // tap fallback lives while the splash or intro scene is up
-  var cue = null;
+  // Sound by default: try to play the chime as the intro starts. Where the
+  // browser blocks automatic sound, any tap WHILE THE INTRO IS ON SCREEN may
+  // still sync the chime to the reveal; after the intro there is no sound
+  // trigger at all - no button, no unrelated-tap audio, no bypass of browser
+  // autoplay policy.
+  var armed = true;
   function introVisible() {
     return document.body.classList.contains('splashing') || document.body.classList.contains('scene-playing');
   }
-  function hideCue() { if (cue) { cue.remove(); cue = null; } }
-  function showCue() {
-    if (cue || window.ylChime.hasPlayed()) return;
-    cue = document.createElement('button');
-    cue.type = 'button';
-    cue.className = 'sound-cue';
-    cue.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Tap for sound</span>';
-    document.body.appendChild(cue);
-  }
-  function onFirstTap(e) {
-    if (!armed || window.ylChime.hasPlayed()) return;
-    if (introVisible()) {
-      // Any tap while the intro is on screen may sync the chime to the reveal.
-      window.ylChime.play().then(function (ok) { if (ok) disarm(); });
-      return;
-    }
-    // Intro over: only a tap on the sound control itself plays; any other tap
-    // just dismisses the offer - no sound from unrelated taps, ever.
-    if (e && e.target && e.target.closest && e.target.closest('.sound-cue')) {
-      window.ylChime.play().then(function (ok) { if (ok) disarm(); });
-    } else if (cue) {
-      disarm();
-    }
+  function onFirstTap() {
+    if (!armed || window.ylChime.hasPlayed() || !introVisible()) return;
+    window.ylChime.play().then(function (ok) { if (ok) disarm(); });
   }
   function disarm() {
     if (!armed) return;
     armed = false;
     document.removeEventListener('pointerdown', onFirstTap);
-    hideCue();
   }
   document.addEventListener('pointerdown', onFirstTap);
   window.ylChime.play().catch(function () {});
-  // Autoplay blocked: offer the deliberate tap control. It appears with the
-  // intro and STAYS until used or dismissed - nobody should have to win a
-  // two-second race to hear the chime. Tapping the pill plays it once;
-  // tapping anything else on the page dismisses the offer without sound.
-  setTimeout(function () {
-    if (!window.ylChime.hasPlayed() && introVisible()) showCue();
-    var movedInline = false;
-    var watch = setInterval(function () {
-      if (!armed) { clearInterval(watch); return; }
-      if (window.ylChime.hasPlayed()) { disarm(); clearInterval(watch); return; }
-      if (introVisible()) showCue();
-      if (document.body.classList.contains('gated')) { hideCue(); return; }
-      // Intro over: park the offer inside the page flow (above the note), so
-      // it never covers text or buttons while it waits for a deliberate tap.
-      if (cue && !movedInline && document.body.classList.contains('entering')) {
-        movedInline = true;
-        var note = document.querySelector('.home-hero .intro-note');
-        cue.classList.add('in-flow');
-        if (note && note.parentNode) note.parentNode.insertBefore(cue, note);
-      }
-    }, 250);
-  }, 600);
+  // Once the intro is over, the sound offer ends with it.
+  var watch = setInterval(function () {
+    if (window.ylChime.hasPlayed() || (!introVisible() && (document.body.classList.contains('entering') || document.body.classList.contains('gated') || document.body.classList.contains('home-active')))) {
+      disarm(); clearInterval(watch);
+    }
+  }, 250);
   var done = false;
   function end() {
     if (done) return;
@@ -612,7 +579,7 @@
     playedThisLoad = true;
     // The tap that entered (guest / sign-in / returning click) is a live user
     // gesture: this is the reliable moment the chime is allowed to sound.
-    if (window.ylChime) window.ylChime.play().then(function (ok) { if (ok) { var c = document.querySelector('.sound-cue'); if (c) c.remove(); } });
+    if (window.ylChime) window.ylChime.play();
     document.body.classList.add('scene-playing');
     var done = false;
     function end() {
