@@ -46,6 +46,7 @@
       </div>
       <form id="accountForm" novalidate>
         <label id="accEmailWrap">Email<input id="accEmail" type="email" autocomplete="email" required></label>
+        <label class="hidden" id="accUserWrap">Username<input id="accUsername" type="text" autocomplete="off" minlength="3" maxlength="20" placeholder="3-20 letters, numbers or _"></label>
         <label>Password<input id="accPassword" type="password" autocomplete="current-password" minlength="8" required></label>
         <label class="hidden" id="accConfirmWrap">Confirm password<input id="accConfirm" type="password" autocomplete="new-password" minlength="8"></label>
         <button class="button" id="accSubmit" type="submit">Sign in</button>
@@ -60,6 +61,7 @@
     <nav aria-label="Main navigation">
       <a href="#top" id="navHome">Home</a>
       <button class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch theme">\u263e</button>
+            <button class="user-chip hidden" id="userChip" type="button" aria-label="Your account"></button>
       <button class="login-link" id="openAuth" type="button">Sign in</button>
       <button class="button button-small" id="navBoard" type="button">Browse an area</button>
     </nav>
@@ -191,14 +193,32 @@
   <footer><strong>YourLocality</strong><span>Built as a civic-tech project · Developed by himanshuurawat</span></footer>
   <div class="modal-backdrop" id="nameModal" aria-hidden="true">
     <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
-      <h2 id="nameTitle">Choose your public name</h2>
-      <p>This name shows on your shared reports and discussion posts. Everyone can see it, so don't use your email.</p>
+      <h2 id="nameTitle">Choose your username</h2>
+      <p>Your username shows on your shared reports and discussion posts. It is unique to you, everyone can see it, and you can't change it later, so don't use your email.</p>
       <form id="nameForm">
-        <label>Public name<input id="publicName" autocomplete="off" maxlength="40" placeholder="Example: Himanshu R" required></label>
-        <button class="button" type="submit">Save</button>
+        <label>Username<input id="usernameInput" autocomplete="off" minlength="3" maxlength="20" placeholder="3-20 letters, numbers or _" required></label>
+        <button class="button" type="submit">Save username</button>
         <p class="form-note" id="nameMessage" role="status"></p>
       </form>
-      <p class="welcome-note"><button class="login-link" id="nameSkip" type="button">Continue as "Resident"</button></p>
+      <p class="welcome-note"><button class="login-link" id="nameCancel" type="button">Not now</button></p>
+    </section>
+  </div>
+  <div class="modal-backdrop" id="acctModal" aria-hidden="true">
+    <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="acctTitle">
+      <h2 id="acctTitle">Your account</h2>
+      <p>Your account details aren't shown on public reports. Your current password is never displayed; you can only set a new one.</p>
+      <dl class="acct-rows">
+        <div><dt>Username</dt><dd id="acctUsername">-</dd></div>
+        <div><dt>Email</dt><dd id="acctEmail">-</dd></div>
+        <div><dt>Password</dt><dd>Never shown. Set a new one below.</dd></div>
+      </dl>
+      <form id="acctPassForm">
+        <label>New password<input id="acctPass" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Confirm new password<input id="acctPass2" type="password" autocomplete="new-password" minlength="8" required></label>
+        <button class="button" type="submit">Change password</button>
+        <p class="form-note" id="acctMessage" role="status"></p>
+      </form>
+      <p class="welcome-note"><button class="login-link" id="acctClose" type="button">Close</button></p>
     </section>
   </div>
   <script src="backend.js"></script>

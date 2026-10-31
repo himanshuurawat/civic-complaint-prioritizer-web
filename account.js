@@ -52,15 +52,38 @@
     $("accLinks").classList.toggle("hidden", rs);
     $("tabSignin").classList.toggle("active", !up); $("tabSignup").classList.toggle("active", up);
     $("tabSignin").setAttribute("aria-selected", String(!up)); $("tabSignup").setAttribute("aria-selected", String(up));
+    $("accUserWrap").classList.toggle("hidden", !up);
+    $("accUsername").required = up;
     $("accConfirmWrap").classList.toggle("hidden", !(up || rs));
     $("accountTitle").textContent = rs ? "Set a new password" : up ? "Create account" : "Sign in";
     $("accSubmit").textContent = rs ? "Save new password" : up ? "Create account" : "Sign in";
     $("accPassword").autocomplete = (up || rs) ? "new-password" : "current-password";
     $("accForgot").classList.toggle("hidden", up);
   }
-  function enterAs(email) {
+  // Unique usernames: new accounts carry one from signup, older accounts are
+  // asked once after sign-in. Never blocks entering; "Not now" just asks again later.
+  async function ensureUsername() {
+    if (!window.civicBackend || !window.civicBackend.getClaimedUsername) return null;
+    let claimed = null;
+    try { claimed = await window.civicBackend.getClaimedUsername(); } catch (e) { return null; }
+    if (claimed) return claimed;
+    try {
+      const pending = await window.civicBackend.getPendingUsername();
+      if (pending) {
+        const c = await window.civicBackend.claimUsername(pending);
+        if (c.ok) return c.username;
+      }
+    } catch (e) { /* fall through to asking */ }
+    if (window.civicAskUsername) {
+      try { return await window.civicAskUsername(); } catch (e) { return null; }
+    }
+    return null;
+  }
+  async function enterAs(email) {
     close(); form.reset();
     if (window.civicEnter) window.civicEnter(nameFrom(email), true);
+    const username = await ensureUsername();
+    if (username && window.civicEnter) window.civicEnter(username, true);
   }
 
   $("accountBtn").addEventListener("click", open);
@@ -90,7 +113,13 @@
     const btn = $("accSubmit"); btn.disabled = true;
     try {
       if (mode === "signup") {
-        const r = await api("/auth/v1/signup" + redirectQuery(), { email: email, password: password });
+        const username = $("accUsername").value.trim().toLowerCase();
+        if (!/^[a-z0-9_]{3,20}$/.test(username)) { say("Usernames use 3-20 lowercase letters, numbers or _.", true); return; }
+        if (window.civicBackend && window.civicBackend.usernameAvailable) {
+          const a = await window.civicBackend.usernameAvailable(username);
+          if (a.ok && !a.available) { say("That username is taken. Try another.", true); return; }
+        }
+        const r = await api("/auth/v1/signup" + redirectQuery(), { email: email, password: password, data: { username: username } });
         if (!r.ok) { say(friendly(r), true); return; }
         if (r.data.access_token) { saveSession(r.data); enterAs(email); return; }
         say("Almost done. If this email can be used, we sent a confirmation link. Open it, then sign in here.");
@@ -124,6 +153,51 @@
     if (type === "signup" || type === "email_change") { open(); say("Email confirmed. Sign in to continue."); }
   })();
 
+  // ---- Account panel: own username, own email, change password. The current
+  // password is never shown anywhere; only a new one can be set.
+  const acctModal = $("acctModal");
+  function openAcct() {
+    const s = loadSession();
+    if (!s || !s.access_token) return; // chip only shows when signed in anyway
+    $("acctMessage").textContent = ""; $("acctPass").value = ""; $("acctPass2").value = "";
+    $("acctEmail").textContent = s.email || "";
+    $("acctUsername").textContent = "...";
+    acctModal.classList.add("visible");
+    acctModal.setAttribute("aria-hidden", "false");
+    if (window.civicBackend && window.civicBackend.getClaimedUsername) {
+      window.civicBackend.getClaimedUsername().then(u => {
+        $("acctUsername").textContent = u || "Not chosen yet";
+      }).catch(() => { $("acctUsername").textContent = "Not chosen yet"; });
+    } else {
+      $("acctUsername").textContent = "Not chosen yet";
+    }
+    if (!s.email) {
+      api("/auth/v1/user", null, s.access_token, "GET").then(r => {
+        if (r.ok && r.data.email) $("acctEmail").textContent = r.data.email;
+      }).catch(() => {});
+    }
+  }
+  function closeAcct() { acctModal.classList.remove("visible"); acctModal.setAttribute("aria-hidden", "true"); }
+  $("userChip").addEventListener("click", openAcct);
+  $("acctClose").addEventListener("click", closeAcct);
+  $("acctPassForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const s = loadSession();
+    if (!s || !s.access_token) { say2("Please sign in again.", true); return; }
+    const p1 = $("acctPass").value, p2 = $("acctPass2").value;
+    if (p1.length < 8) { say2("Password must be at least 8 characters.", true); return; }
+    if (p1 !== p2) { say2("The two passwords do not match.", true); return; }
+    const b = event.target.querySelector("button[type=submit]"); b.disabled = true;
+    try {
+      const r = await api("/auth/v1/user", { password: p1 }, s.access_token, "PUT");
+      if (r.ok) { $("acctPass").value = ""; $("acctPass2").value = ""; say2("Password updated."); }
+      else if (r.status === 401 || r.status === 403) say2("Your sign-in has expired. Please sign in again.", true);
+      else say2(r.data.error_code === "same_password" ? "Choose a password you have not used before." : r.data.error_code === "weak_password" ? "Choose a stronger password (at least 8 characters)." : "Could not update the password. Try again.", true);
+    } catch (e) { say2("Could not reach the sign-in service. Check your connection.", true); }
+    finally { b.disabled = false; }
+  });
+  function say2(text, isError) { const m = $("acctMessage"); m.textContent = text; m.classList.toggle("error", !!isError); }
+
   window.civicSignOut = function () {
     const s = loadSession(); clearSession();
     if (s && s.access_token) api("/auth/v1/logout", null, s.access_token).catch(() => {});
@@ -138,7 +212,10 @@
         const t = await api("/auth/v1/token?grant_type=refresh_token", { refresh_token: s.refresh_token });
         if (t.ok) { saveSession(t.data); r = { ok: true, data: t.data.user || {} }; }
       }
-      if (r.ok && r.data.email) { if (window.civicEnter) window.civicEnter(nameFrom(r.data.email), true); }
+      if (r.ok && r.data.email) {
+        if (window.civicEnter) window.civicEnter(nameFrom(r.data.email), true);
+        ensureUsername().then(username => { if (username && window.civicEnter) window.civicEnter(username, true); });
+      }
       else if (!r.ok && (r.status === 401 || r.status === 403 || r.status === 400)) clearSession();
     } catch (e) { /* offline: stay on the welcome page, keep the session */ }
   })();

@@ -214,44 +214,57 @@
   }
 
 
-  // ---- Public display name (user-chosen; never derived from email) ----
+  // ---- Unique username (the public identity on reports and comments) ----
   const nameModal = $("nameModal");
   let nameResolver = null;
+  let namePromise = null;
   function openNameModal() {
+    $("nameMessage").textContent = "";
     nameModal.classList.add("visible");
     nameModal.setAttribute("aria-hidden", "false");
-    $("publicName").focus();
+    const input = $("usernameInput");
+    if (!input.value && window.civicBackend && window.civicBackend.suggestUsername) {
+      window.civicBackend.suggestUsername().then(s => { if (s && !input.value) input.value = s; });
+    }
+    input.focus();
   }
   function closeNameModal() {
     nameModal.classList.remove("visible");
     nameModal.setAttribute("aria-hidden", "true");
   }
-  function askPublicName() {
-    return new Promise(resolve => { nameResolver = resolve; openNameModal(); });
+  function askUsername() {
+    if (namePromise) return namePromise; // already asking; don't stack a second prompt
+    namePromise = new Promise(resolve => { nameResolver = resolve; openNameModal(); });
+    return namePromise;
   }
+  window.civicAskUsername = askUsername;
   $("nameForm").addEventListener("submit", async event => {
     event.preventDefault();
-    const name = $("publicName").value.trim().replace(/\s+/g, " ").slice(0, 40);
-    if (name.length < 2) { $("nameMessage").textContent = "Pick a name with at least 2 letters."; return; }
+    const name = $("usernameInput").value.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(name)) { $("nameMessage").textContent = "Use 3-20 lowercase letters, numbers or _."; return; }
     const btn = event.target.querySelector("button[type=submit]");
     btn.disabled = true;
     try {
-      const r = await window.civicBackend.setPublicName(name);
-      if (!r.ok) { $("nameMessage").textContent = "That name could not be saved. Try again."; return; }
+      const r = await window.civicBackend.claimUsername(name);
+      if (!r.ok) { $("nameMessage").textContent = r.error === "taken" ? "That username is taken. Try another." : "That username could not be saved. Check your connection and try again."; return; }
       closeNameModal();
+      if (window.civicEnter) window.civicEnter(name, true); // greet with the new username right away
       if (nameResolver) { nameResolver(name); nameResolver = null; }
+      namePromise = null;
     } finally { btn.disabled = false; }
   });
-  $("nameSkip").addEventListener("click", () => {
+  $("nameCancel").addEventListener("click", () => {
     closeNameModal();
-    if (nameResolver) { nameResolver("Resident"); nameResolver = null; }
+    if (nameResolver) { nameResolver(null); nameResolver = null; }
+    namePromise = null;
   });
   async function requirePostAccess() {
     const s = await window.civicBackend.signedInSession();
     if (!s) { promptSignIn("Sign in to share a report or join a discussion."); return null; }
-    const name = await window.civicBackend.getPublicName();
+    const name = await window.civicBackend.getClaimedUsername();
     if (name) return { session: s, author: name };
-    const chosen = await askPublicName();
+    const chosen = await askUsername(); // null when they pick "Not now": don't post
+    if (!chosen) return null;
     return { session: s, author: chosen };
   }
 
@@ -809,9 +822,13 @@
     const user = currentUser();
     greeting.textContent = user && user.name ? "Hi, " + user.name + "." : "";
     signOutBtn.textContent = user && user.account ? "Sign out" : "Sign in";
+    const chip = $("userChip");
+    if (user && user.account && user.name) { chip.textContent = user.name; chip.classList.remove("hidden"); }
+    else chip.classList.add("hidden");
     window.scrollTo(0, 0);
   }
   function showWelcome() {
+    $("userChip").classList.add("hidden");
     document.body.classList.add("gated");
     document.body.classList.remove("home-active");
     document.documentElement.classList.remove("snap-y");
