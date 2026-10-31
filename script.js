@@ -337,12 +337,23 @@
         const img = new Image();
         img.onerror = () => reject(new Error("decode"));
         img.onload = () => {
-          const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+          // Compress for upload: cap the long edge, then step JPEG quality
+          // down until the photo is small enough. Turns multi-MB phone
+          // shots into roughly 100-250KB uploads while keeping complaint
+          // details (cracks, signs, labels) legible. EXIF orientation is
+          // honored by the browser's image decode.
+          const MAX_EDGE = 1280;
+          const TARGET_CHARS = 340000; // ~250KB of JPEG, under the 400k send cap
+          const scale = Math.min(1, MAX_EDGE / Math.max(img.width, img.height));
           const canvas = document.createElement("canvas");
           canvas.width = Math.max(1, Math.round(img.width * scale));
           canvas.height = Math.max(1, Math.round(img.height * scale));
           canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.72));
+          const qualities = [0.8, 0.72, 0.64, 0.56, 0.48];
+          for (const q of qualities) {
+            const out = canvas.toDataURL("image/jpeg", q);
+            if (out.length <= TARGET_CHARS || q === qualities[qualities.length - 1]) { resolve(out); return; }
+          }
         };
         img.src = reader.result;
       };
