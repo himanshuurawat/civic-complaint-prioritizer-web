@@ -822,9 +822,13 @@
     const user = currentUser();
     greeting.textContent = user && user.name ? "Hi, " + user.name + "." : "";
     signOutBtn.textContent = user && user.account ? "Sign out" : "Sign in";
+    const chip = $("userChip");
+    if (user && user.account && user.name) { chip.textContent = user.name; chip.classList.remove("hidden"); }
+    else chip.classList.add("hidden");
     window.scrollTo(0, 0);
   }
   function showWelcome() {
+    $("userChip").classList.add("hidden");
     document.body.classList.add("gated");
     document.body.classList.remove("home-active");
     document.documentElement.classList.remove("snap-y");
