@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; connect-src 'self' https://omuednmzkvaalrwdxbsq.supabase.co; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <meta name="description" content="A civic issue reporting website connecting residents with local authorities.">
+  <title>YourLocality - Civic Complaint Prioritizer</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Ccircle%20cx='16'%20cy='16'%20r='12'%20fill='none'%20stroke='%2343d9ad'%20stroke-width='2.2'/%3E%3Cpath%20d='M16%208.4c-3.2%200-5.8%202.6-5.8%205.8%200%204.1%205.8%209.4%205.8%209.4s5.8-5.3%205.8-9.4c0-3.2-2.6-5.8-5.8-5.8z'%20fill='none'%20stroke='%232c7df0'%20stroke-width='2.1'/%3E%3Ccircle%20cx='16'%20cy='14.2'%20r='2.1'%20fill='%232c7df0'/%3E%3C/svg%3E">
+  <style>html,body{background:#05070c}</style>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="splashing">
+  <div class="splash" id="splash" aria-hidden="true">
+    <div class="splash-inner">
+      <svg class="logo-mark splash-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ripple" cx="16" cy="16" r="12"/><circle class="ring" cx="16" cy="16" r="12"/><path class="pin" d="M16 8.4c-3.2 0-5.8 2.6-5.8 5.8 0 4.1 5.8 9.4 5.8 9.4s5.8-5.3 5.8-9.4c0-3.2-2.6-5.8-5.8-5.8z"/><circle class="pin-dot" cx="16" cy="14.2" r="2.1"/></svg>
+      <p class="splash-brand">Your<span>Locality</span></p>
+      <p class="splash-tag">Make local problems visible.</p>
+    </div>
+  </div>
+  <div class="intro-scene" id="introScene" aria-hidden="true">
+    <img class="scene-photo" src="photos/road.jpg" alt="" aria-hidden="true">
+    <div class="scene-scrim" aria-hidden="true"></div>
+    <div class="scene-copy">
+      <p class="scene-word">Broken.</p>
+      <p class="scene-sub">Show what's not working near you.</p>
+    </div>
+  </div>
+  <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
+    <div class="welcome-card">
+      <p class="brand-mark logo"><svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ripple" cx="16" cy="16" r="12"/><circle class="ring" cx="16" cy="16" r="12"/><path class="pin" d="M16 8.4c-3.2 0-5.8 2.6-5.8 5.8 0 4.1 5.8 9.4 5.8 9.4s5.8-5.3 5.8-9.4c0-3.2-2.6-5.8-5.8-5.8z"/><circle class="pin-dot" cx="16" cy="14.2" r="2.1"/></svg><span class="logo-text">Your<span>Locality</span></span></p>
+      <h1 id="welcomeTitle">Make local problems visible.</h1>
+      <svg class="welcome-line" viewBox="0 0 240 28" aria-hidden="true"><path pathLength="1" d="M4 22h24l8-12 8 12h28l8-16 8 16h28l8-9 8 9h28l8-13 8 13h28l8-7 8 7h20"/></svg>
+      <p class="welcome-copy">Report issues in your area and see what neighbours have reported. Sign in with your account, or explore as a guest.</p>
+      <button class="button" id="accountBtn" type="button">Sign in or create account</button>
+      <p class="welcome-or"><span>or</span></p>
+      <button class="button button-ghost" id="guestBtn" type="button">Continue as guest</button>
+      <small class="welcome-note">Reports you share, and their photos, are public. Reports from before sharing existed stay private in this browser. Guest mode is not an account.</small>
+    </div>
+    <div class="welcome-card hidden" id="accountCard" role="dialog" aria-labelledby="accountTitle">
+      <p class="brand-mark logo"><span class="logo-text">Your<span>Locality</span></span></p>
+      <h1 id="accountTitle">Sign in</h1>
+      <div class="auth-tabs" role="tablist">
+        <button type="button" class="active" id="tabSignin" role="tab" aria-selected="true">Sign in</button>
+        <button type="button" id="tabSignup" role="tab" aria-selected="false">Create account</button>
+      </div>
+      <form id="accountForm" novalidate>
+        <label id="accEmailWrap">Email<input id="accEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="accPassword" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label class="hidden" id="accConfirmWrap">Confirm password<input id="accConfirm" type="password" autocomplete="new-password" minlength="8"></label>
+        <button class="button" id="accSubmit" type="submit">Sign in</button>
+        <p class="form-note" id="accMessage" role="status"></p>
+      </form>
+      <p class="welcome-note" id="accLinks"><button class="login-link" id="accForgot" type="button">Forgot password?</button> <button class="login-link" id="accBack" type="button">Back</button></p>
+      <small class="welcome-note">Your email and password are handled by Supabase Auth, not stored by this website. Shared reports and photos are public; older reports saved before sharing stay private in this browser.</small>
+    </div>
+  </section>
+  <header class="site-header">
+    <a class="brand logo" href="#top" aria-label="YourLocality home"><svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true"><circle class="ripple" cx="16" cy="16" r="12"/><circle class="ring" cx="16" cy="16" r="12"/><path class="pin" d="M16 8.4c-3.2 0-5.8 2.6-5.8 5.8 0 4.1 5.8 9.4 5.8 9.4s5.8-5.3 5.8-9.4c0-3.2-2.6-5.8-5.8-5.8z"/><circle class="pin-dot" cx="16" cy="14.2" r="2.1"/></svg><span class="logo-text">Your<span>Locality</span></span></a>
+    <nav aria-label="Main navigation">
+      <a href="#top" id="navHome">Home</a>
+      <button class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch theme">\u263e</button>
+      <button class="login-link" id="openAuth" type="button">Sign in</button>
+      <button class="button button-small" id="navBoard" type="button">Browse an area</button>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- Page 1: intro + feature cards (the sketch) -->
+    <section class="view" id="viewHome" aria-labelledby="introHeading">
+      <div class="home-hero">
+        <div class="hero-photos" aria-hidden="true">
+          <picture data-cat="Roads" class="active"><source media="(max-width:640px)" srcset="photos/road-m.jpg"><img src="photos/road.jpg" alt=""></picture>
+          <picture data-cat="Waste"><source media="(max-width:640px)" srcset="photos/garbage-m.jpg"><img src="photos/garbage.jpg" alt="" loading="lazy"></picture>
+          <picture data-cat="Water"><source media="(max-width:640px)" srcset="photos/water-m.jpg"><img src="photos/water.jpg" alt="" loading="lazy"></picture>
+          <picture data-cat="Streetlights"><source media="(max-width:640px)" srcset="photos/wires-m.jpg"><img src="photos/wires.jpg" alt="" loading="lazy"></picture>
+          <picture data-cat="Safety"><source media="(max-width:640px)" srcset="photos/streetlight-m.jpg"><img src="photos/streetlight.jpg" alt="" loading="lazy"></picture>
+          <picture data-cat="Other"><source media="(max-width:640px)" srcset="photos/potholes-m.jpg"><img src="photos/potholes.jpg" alt="" loading="lazy"></picture>
+        </div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="hero-haze" aria-hidden="true"></div>
+        <div class="home-hero-inner">
+          <div class="intro">
+            <p class="greeting" id="greeting" aria-live="polite"></p>
+            <h1 id="introHeading">What is not working<br><em>near you?</em></h1>
+          </div>
+          <div class="feature-grid" id="featureGrid" role="list"></div>
+          <p class="intro-note">Reports you share are public and tied to the area you choose. Anyone can read them; sharing a report or joining a discussion needs a sign-in.</p>
+        </div>
+      </div>
+
+      <section class="device-section" id="deviceSection" aria-labelledby="deviceHeading" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">SAVED ON THIS DEVICE</p><h2 id="deviceHeading">Your earlier reports</h2></div>
+        </div>
+        <p class="device-note">These were saved in this browser before shared reports existed. Only you can see them here; they are not public.</p>
+        <div class="issue-grid" id="deviceList"></div>
+      </section>
+    </section>
+
+    <!-- Step 2: where is the problem -->
+    <section class="view hidden" id="viewLocation" aria-labelledby="locationHeading">
+      <button class="back-link" type="button" data-back="home">&larr; Back</button>
+      <p class="eyebrow">STEP 1 OF 2</p>
+      <h2 id="locationHeading">Where is this problem?</h2>
+      <p class="step-copy">People browsing this area will see the report. Include the city in the name so neighbours can find the right place, like "Green Park, Dehradun".</p>
+      <form id="locationForm" class="step-form">
+        <label>Area and city
+          <input id="areaInput" maxlength="70" placeholder="Area, street or landmark, city" required autocomplete="off">
+        </label>
+        <button class="button" type="submit">Continue <span>&rarr;</span></button>
+        <button class="text-link as-button" id="seeAreaBtn" type="button">See existing reports in this area first</button>
+        <p class="form-note" id="locationNote" role="status"></p>
+        <small class="photo-note">Only the name you type is stored with the report. We never ask for your GPS or home location.</small>
+      </form>
+    </section>
+
+    <!-- Step 3: describe and submit -->
+    <section class="view hidden" id="viewReport" aria-labelledby="reportHeading">
+      <button class="back-link" type="button" data-back="location">&larr; Back</button>
+      <p class="eyebrow">STEP 2 OF 2</p>
+      <h2 id="reportHeading">Describe the problem</h2>
+      <p class="step-copy"><span class="tag" id="reportCategoryTag"></span> <span id="reportAreaLabel"></span></p>
+      <form id="reportForm" class="report-form">
+        <label>Issue title<input id="title" name="title" maxlength="70" placeholder="Example: Pothole near market entrance" required></label>
+        <label>Describe the problem<textarea id="description" name="description" rows="4" maxlength="280" placeholder="What happened? Why does it need attention?" required></textarea><small id="descCount" class="count">0 / 280</small></label>
+        <div class="photos">
+          <span class="rf-label">Photos of the problem <em>optional, up to 3</em></span>
+          <label class="dropzone" for="photoInput">
+            <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp" multiple>
+            <strong>Add photos</strong>
+            <span>JPG, PNG or WebP. Resized in your browser.</span>
+          </label>
+          <div class="photo-preview" id="photoPreview" aria-live="polite"></div>
+          <small class="photo-note">Photos are resized in your browser and location data is removed. They will be public with the report. Avoid faces and number plates.</small>
+        </div>
+        <button class="button" type="submit">Share this report <span>&rarr;</span></button>
+        <p class="form-note" id="formMessage" role="status"></p>
+      </form>
+    </section>
+
+    <!-- Shared board for one area -->
+    <section class="view hidden" id="viewBoard" aria-labelledby="boardHeading">
+      <button class="back-link" type="button" data-back="home">&larr; Back</button>
+      <div class="section-heading">
+        <div><p class="eyebrow">COMMUNITY BOARD</p><h2 id="boardHeading">Reports in <span id="boardArea">your area</span></h2></div>
+        <label class="filter-label">Filter by type
+          <select id="boardFilter"><option value="All">All types</option></select>
+        </label>
+      </div>
+      <form id="boardAreaForm" class="board-area-form">
+        <input id="boardAreaInput" maxlength="70" placeholder="Area and city, e.g. Green Park, Dehradun" autocomplete="off">
+        <button class="button button-small" type="submit">Look up</button>
+      </form>
+      <div class="issue-grid" id="boardList" aria-live="polite"></div>
+      <p class="form-note" id="boardNote" role="status"></p>
+    </section>
+
+    <!-- One shared report + discussion -->
+    <section class="view hidden" id="viewDetail" aria-labelledby="detailTitle">
+      <button class="back-link" type="button" data-back="board">&larr; Back to the board</button>
+      <article class="detail-card">
+        <div class="issue-meta"><span class="tag" id="detailTag"></span><span id="detailDate"></span></div>
+        <h2 id="detailTitle"></h2>
+        <p class="detail-loc" id="detailLoc"></p>
+        <div class="issue-photos detail-photos" id="detailPhotos" hidden></div>
+        <p class="detail-desc" id="detailDesc"></p>
+        <p class="detail-by" id="detailBy"></p>
+        <div class="detail-actions">
+          <button class="text-link as-button danger" id="deleteBtn" type="button" hidden>Delete my report</button>
+        </div>
+        <p class="form-note" id="detailNote" role="status"></p>
+      </article>
+      <section class="discussion" aria-labelledby="discussionHeading">
+        <h3 id="discussionHeading">Discussion</h3>
+        <div id="commentList" class="comment-list" aria-live="polite"></div>
+        <form id="commentForm" class="comment-form">
+          <label class="hidden" for="commentInput">Add to the discussion</label>
+          <input id="commentInput" maxlength="280" placeholder="Add something useful for neighbours&hellip;" autocomplete="off" required>
+          <button class="button button-small" type="submit">Post</button>
+        </form>
+        <p class="form-note" id="commentNote" role="status"></p>
+      </section>
+    </section>
+
+  </main>
+
+  <div class="swipe-cue" id="swipeCue" aria-hidden="true"><span class="cue-text">Swipe</span><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></div>
+
+  <footer><strong>YourLocality</strong><span>Built as a civic-tech project · Developed by himanshuurawat</span></footer>
+  <div class="modal-backdrop" id="nameModal" aria-hidden="true">
+    <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="nameTitle">
+      <h2 id="nameTitle">Choose your public name</h2>
+      <p>This name shows on your shared reports and discussion posts. Everyone can see it, so don't use your email.</p>
+      <form id="nameForm">
+        <label>Public name<input id="publicName" autocomplete="off" maxlength="40" placeholder="Example: Himanshu R" required></label>
+        <button class="button" type="submit">Save</button>
+        <p class="form-note" id="nameMessage" role="status"></p>
+      </form>
+      <p class="welcome-note"><button class="login-link" id="nameSkip" type="button">Continue as "Resident"</button></p>
+    </section>
+  </div>
+  <script src="backend.js"></script>
+  <script src="script.js"></script>
+  <script src="account.js"></script>
+</body>
+</html>
