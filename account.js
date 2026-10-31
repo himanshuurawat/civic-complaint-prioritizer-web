@@ -153,6 +153,51 @@
     if (type === "signup" || type === "email_change") { open(); say("Email confirmed. Sign in to continue."); }
   })();
 
+  // ---- Account panel: own username, own email, change password. The current
+  // password is never shown anywhere; only a new one can be set.
+  const acctModal = $("acctModal");
+  function openAcct() {
+    const s = loadSession();
+    if (!s || !s.access_token) return; // chip only shows when signed in anyway
+    $("acctMessage").textContent = ""; $("acctPass").value = ""; $("acctPass2").value = "";
+    $("acctEmail").textContent = s.email || "";
+    $("acctUsername").textContent = "...";
+    acctModal.classList.add("visible");
+    acctModal.setAttribute("aria-hidden", "false");
+    if (window.civicBackend && window.civicBackend.getClaimedUsername) {
+      window.civicBackend.getClaimedUsername().then(u => {
+        $("acctUsername").textContent = u || "Not chosen yet";
+      }).catch(() => { $("acctUsername").textContent = "Not chosen yet"; });
+    } else {
+      $("acctUsername").textContent = "Not chosen yet";
+    }
+    if (!s.email) {
+      api("/auth/v1/user", null, s.access_token, "GET").then(r => {
+        if (r.ok && r.data.email) $("acctEmail").textContent = r.data.email;
+      }).catch(() => {});
+    }
+  }
+  function closeAcct() { acctModal.classList.remove("visible"); acctModal.setAttribute("aria-hidden", "true"); }
+  $("userChip").addEventListener("click", openAcct);
+  $("acctClose").addEventListener("click", closeAcct);
+  $("acctPassForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const s = loadSession();
+    if (!s || !s.access_token) { say2("Please sign in again.", true); return; }
+    const p1 = $("acctPass").value, p2 = $("acctPass2").value;
+    if (p1.length < 8) { say2("Password must be at least 8 characters.", true); return; }
+    if (p1 !== p2) { say2("The two passwords do not match.", true); return; }
+    const b = event.target.querySelector("button[type=submit]"); b.disabled = true;
+    try {
+      const r = await api("/auth/v1/user", { password: p1 }, s.access_token, "PUT");
+      if (r.ok) { $("acctPass").value = ""; $("acctPass2").value = ""; say2("Password updated."); }
+      else if (r.status === 401 || r.status === 403) say2("Your sign-in has expired. Please sign in again.", true);
+      else say2(r.data.error_code === "same_password" ? "Choose a password you have not used before." : r.data.error_code === "weak_password" ? "Choose a stronger password (at least 8 characters)." : "Could not update the password. Try again.", true);
+    } catch (e) { say2("Could not reach the sign-in service. Check your connection.", true); }
+    finally { b.disabled = false; }
+  });
+  function say2(text, isError) { const m = $("acctMessage"); m.textContent = text; m.classList.toggle("error", !!isError); }
+
   window.civicSignOut = function () {
     const s = loadSession(); clearSession();
     if (s && s.access_token) api("/auth/v1/logout", null, s.access_token).catch(() => {});
