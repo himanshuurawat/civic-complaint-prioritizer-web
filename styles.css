@@ -396,6 +396,9 @@ body.home-active nav .user-chip{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.55)
 /* Rounded pill nav on phones too (previously desktop-only): mirrors the
    min-width:641px rule above, with tighter spacing for small screens. */
 @media(max-width:640px){
+/* Two-row header on phones: brand on the first row, the rounded pill nav wraps
+   to the second so every item (theme, username chip, sign out, browse) fits. */
+.site-header{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:10px;row-gap:8px}
 body.home-active nav{background:rgba(8,11,17,.52);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:4px 6px;gap:2px;box-shadow:0 8px 30px #00000040}
 body.home-active nav a,body.home-active .login-link{padding:5px 9px;border-radius:999px}
 body.home-active .user-chip{max-width:88px;padding:4px 9px;font-size:12px}
