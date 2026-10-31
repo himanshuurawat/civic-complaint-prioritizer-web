@@ -392,7 +392,7 @@ body.home-active #viewHome.view{animation:none}
    Global: applies at every width, including the mobile pill nav below. */
 .user-chip{border:1px solid currentColor;border-radius:999px;background:transparent;color:var(--ink);font-weight:700;font-size:13px;padding:6px 12px;cursor:pointer;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.home-active nav .user-chip{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.55)}
-.acct-rows{margin:0 0 18px;display:grid;gap:10px}.acct-rows div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:8px}.acct-rows dt{color:var(--muted);font-weight:700;font-size:13px}.acct-rows dd{margin:0;font-weight:700;word-break:break-all;text-align:right}
+.acct-rows{margin:0 0 18px;display:grid;gap:10px}.acct-rows div{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:8px}.acct-rows dt{color:var(--muted);font-weight:700;font-size:13px}.acct-rows dd{margin:0;font-weight:700;overflow-wrap:anywhere;text-align:right}
 /* Rounded pill nav on phones too (previously desktop-only): mirrors the
    min-width:641px rule above, with tighter spacing for small screens. */
 @media(max-width:640px){
